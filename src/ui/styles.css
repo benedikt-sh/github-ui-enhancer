@@ -407,8 +407,8 @@
 
 /* Widget frame */
 
+/* No `overflow: hidden` here, it would clip dropdown menus in the header. */
 .ghx-widget {
-  overflow: hidden;
   border: 1px solid var(--borderColor-default, #d1d9e0);
   border-radius: var(--borderRadius-medium, 6px);
   background-color: var(--bgColor-default, #ffffff);
@@ -423,6 +423,8 @@
   padding: var(--base-size-8, 8px) var(--base-size-8, 8px) var(--base-size-8, 8px)
     var(--base-size-16, 16px);
   border-bottom: 1px solid var(--borderColor-default, #d1d9e0);
+  border-top-left-radius: calc(var(--borderRadius-medium, 6px) - 1px);
+  border-top-right-radius: calc(var(--borderRadius-medium, 6px) - 1px);
   background-color: var(--bgColor-muted, #f6f8fa);
   box-sizing: border-box;
 }
@@ -509,6 +511,11 @@
 
 .ghx-row:first-child {
   border-top: 0;
+}
+
+.ghx-widget__body > .ghx-list > .ghx-row:last-child {
+  border-bottom-left-radius: calc(var(--borderRadius-medium, 6px) - 1px);
+  border-bottom-right-radius: calc(var(--borderRadius-medium, 6px) - 1px);
 }
 
 .ghx-row:hover {
