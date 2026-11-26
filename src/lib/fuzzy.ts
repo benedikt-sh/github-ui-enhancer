@@ -1,6 +1,7 @@
 import type { RepoSummary } from '../shared/types.ts';
 import { mergeRanges, type HighlightRange } from './highlight.ts';
-import { matchSubsequence } from './subsequence.ts';
+import { matchSubsequence, NOT_A_SUBSEQUENCE } from './subsequence.ts';
+import { createTopK } from './top-k.ts';
 import { foldText, toOriginalRange, wordStarts, type FoldedText } from './text-fold.ts';
 
 export type { HighlightRange } from './highlight.ts';
@@ -74,31 +75,35 @@ interface IndexedRepo {
   readonly nameRank: number;
 }
 
-type Term =
-  | { readonly kind: 'plain'; readonly text: string }
-  | {
-      readonly kind: 'path';
-      readonly text: string;
-      readonly owner: string;
-      readonly name: string;
-      readonly parts: readonly string[];
-    };
+interface PlainTerm {
+  readonly kind: 'plain';
+  readonly text: string;
+}
 
-/** Ranges are folded indices; they are mapped to the original only for returned results. */
-interface TermMatch {
-  readonly score: number;
-  readonly full: readonly HighlightRange[];
-  readonly description: readonly HighlightRange[];
+interface PathTerm {
+  readonly kind: 'path';
+  readonly text: string;
+  readonly owner: string;
+  readonly name: string;
+  readonly parts: readonly string[];
+}
+
+type Term = PlainTerm | PathTerm;
+
+const NO_MATCH = -1;
+
+/**
+ * Collects highlight ranges in folded indices. Matching runs without a sink while ranking
+ * all repos and again with one only for the returned results, to keep keystrokes cheap.
+ */
+interface RangeSink {
+  readonly full: HighlightRange[];
+  readonly description: HighlightRange[];
 }
 
 interface Hit {
   readonly entry: IndexedRepo;
   readonly score: number;
-  readonly matches: readonly TermMatch[];
-}
-
-function nameMatch(score: number, start: number, end: number): TermMatch {
-  return { score, full: [[start, end]], description: [] };
 }
 
 function findWordStart(
@@ -116,32 +121,37 @@ function findWordStart(
   return -1;
 }
 
-function positionsToRanges(positions: readonly number[]): HighlightRange[] {
-  return mergeRanges(positions.map((position) => [position, position + 1]));
+function pushPositions(ranges: HighlightRange[], positions: readonly number[]): void {
+  for (const position of positions) {
+    ranges.push([position, position + 1]);
+  }
 }
 
-function matchName(entry: IndexedRepo, term: string): TermMatch | null {
+function matchName(entry: IndexedRepo, term: string, sink: RangeSink | null): number {
   const { name, nameStart } = entry;
   const index = name.indexOf(term);
   if (index === -1) {
-    return null;
+    return NO_MATCH;
   }
   const coverage = COVERAGE_WEIGHT * (term.length / name.length);
+  let score: number;
+  let start = index;
   if (index === 0) {
-    const score = term.length === name.length ? EXACT_NAME : NAME_PREFIX + coverage;
-    return nameMatch(score, nameStart, nameStart + term.length);
+    score = term.length === name.length ? EXACT_NAME : NAME_PREFIX + coverage;
+  } else {
+    const wordIndex = findWordStart(name, term, index, entry.fullWordStarts, nameStart);
+    start = wordIndex === -1 ? index : wordIndex;
+    score = (wordIndex === -1 ? NAME_SUBSTRING : NAME_WORD_START) + coverage;
   }
-  const wordIndex = findWordStart(name, term, index, entry.fullWordStarts, nameStart);
-  const start = nameStart + (wordIndex === -1 ? index : wordIndex);
-  const score = (wordIndex === -1 ? NAME_SUBSTRING : NAME_WORD_START) + coverage;
-  return nameMatch(score, start, start + term.length);
+  sink?.full.push([nameStart + start, nameStart + start + term.length]);
+  return score;
 }
 
-function matchOwner(entry: IndexedRepo, term: string): TermMatch | null {
+function matchOwner(entry: IndexedRepo, term: string, sink: RangeSink | null): number {
   const { owner } = entry;
   const index = owner.indexOf(term);
   if (index === -1) {
-    return null;
+    return NO_MATCH;
   }
   const coverage = term.length / owner.length;
   let score: number;
@@ -153,54 +163,55 @@ function matchOwner(entry: IndexedRepo, term: string): TermMatch | null {
     start = wordIndex === -1 ? index : wordIndex;
     score = OWNER + (wordIndex === -1 ? 0 : 2) + coverage;
   }
-  return nameMatch(score, start, start + term.length);
+  sink?.full.push([start, start + term.length]);
+  return score;
 }
 
-function matchFullSubsequence(entry: IndexedRepo, term: string): TermMatch | null {
-  const match = matchSubsequence(entry.full.text, entry.fullWordStarts, term);
-  if (match === null) {
-    return null;
+function matchFullSubsequence(entry: IndexedRepo, term: string, sink: RangeSink | null): number {
+  const { text } = entry.full;
+  const positions = sink === null ? null : [];
+  const quality = matchSubsequence(text, entry.fullWordStarts, term, 0, text.length, positions);
+  if (quality === NOT_A_SUBSEQUENCE) {
+    return NO_MATCH;
   }
-  return {
-    score: SUBSEQUENCE + SUBSEQUENCE_RANGE * match.quality,
-    full: positionsToRanges(match.positions),
-    description: [],
-  };
+  if (sink !== null && positions !== null) {
+    pushPositions(sink.full, positions);
+  }
+  return SUBSEQUENCE + SUBSEQUENCE_RANGE * quality;
 }
 
-function matchDescription(entry: IndexedRepo, term: string): TermMatch | null {
-  const text = entry.description.text;
+function matchDescription(entry: IndexedRepo, term: string, sink: RangeSink | null): number {
+  const { text } = entry.description;
   const index = text.indexOf(term);
   if (index === -1) {
-    return null;
+    return NO_MATCH;
   }
   const wordIndex = findWordStart(text, term, index, entry.descriptionWordStarts, 0);
   const start = wordIndex === -1 ? index : wordIndex;
   const earliness = 1 - start / text.length;
-  const score = DESCRIPTION + (wordIndex === -1 ? 0 : 3) + earliness;
-  return { score, full: [], description: [[start, start + term.length]] };
+  sink?.description.push([start, start + term.length]);
+  return DESCRIPTION + (wordIndex === -1 ? 0 : 3) + earliness;
 }
 
-function matchPlainInFullName(entry: IndexedRepo, term: string): TermMatch | null {
-  return matchName(entry, term) ?? matchOwner(entry, term) ?? matchFullSubsequence(entry, term);
+function matchPlainInFullName(entry: IndexedRepo, term: string, sink: RangeSink | null): number {
+  const name = matchName(entry, term, sink);
+  if (name !== NO_MATCH) {
+    return name;
+  }
+  const owner = matchOwner(entry, term, sink);
+  return owner !== NO_MATCH ? owner : matchFullSubsequence(entry, term, sink);
 }
 
-interface SegmentMatch {
-  /** 1 for an exact segment, down to 0.1 for a weak subsequence. */
-  readonly quality: number;
-  readonly ranges: readonly HighlightRange[];
-}
-
-const ANY_SEGMENT: SegmentMatch = { quality: 1, ranges: [] };
-
+/** Quality from 1 for an exact segment down to 0.1 for a weak subsequence. */
 function matchSegment(
   entry: IndexedRepo,
   segment: string,
   offset: number,
   part: string,
-): SegmentMatch | null {
+  ranges: HighlightRange[] | null,
+): number {
   if (part === '') {
-    return ANY_SEGMENT;
+    return 1;
   }
   const index = segment.indexOf(part);
   if (index !== -1) {
@@ -214,56 +225,64 @@ function matchSegment(
       start = wordIndex === -1 ? index : wordIndex;
       quality = (wordIndex === -1 ? 0.4 : 0.5) + 0.1 * coverage;
     }
-    return { quality, ranges: [[offset + start, offset + start + part.length]] };
+    ranges?.push([offset + start, offset + start + part.length]);
+    return quality;
   }
-  const match = matchSubsequence(
-    entry.full.text,
-    entry.fullWordStarts,
-    part,
-    offset,
-    offset + segment.length,
-  );
-  if (match === null) {
-    return null;
+  const { text } = entry.full;
+  const end = offset + segment.length;
+  const positions = ranges === null ? null : [];
+  const quality = matchSubsequence(text, entry.fullWordStarts, part, offset, end, positions);
+  if (quality === NOT_A_SUBSEQUENCE) {
+    return NO_MATCH;
   }
-  return { quality: 0.1 + 0.2 * match.quality, ranges: positionsToRanges(match.positions) };
+  if (ranges !== null && positions !== null) {
+    pushPositions(ranges, positions);
+  }
+  return 0.1 + 0.2 * quality;
 }
 
 /** `owner/name` style term: each side is matched against its own segment of the full name. */
-function matchPath(entry: IndexedRepo, term: Extract<Term, { kind: 'path' }>): TermMatch | null {
-  const owner = matchSegment(entry, entry.owner, 0, term.owner);
-  const name = owner === null ? null : matchSegment(entry, entry.name, entry.nameStart, term.name);
-  if (owner !== null && name !== null) {
-    const quality = 0.4 * owner.quality + 0.6 * name.quality;
-    return {
-      score: OWNER + (EXACT_NAME - OWNER) * quality,
-      full: [...owner.ranges, ...name.ranges],
-      description: [],
-    };
+function matchPath(entry: IndexedRepo, term: PathTerm, sink: RangeSink | null): number {
+  // Buffered so that a failing name segment leaves no owner ranges behind.
+  const ranges: HighlightRange[] | null = sink === null ? null : [];
+  const owner = matchSegment(entry, entry.owner, 0, term.owner, ranges);
+  const name =
+    owner === NO_MATCH
+      ? NO_MATCH
+      : matchSegment(entry, entry.name, entry.nameStart, term.name, ranges);
+  if (name !== NO_MATCH) {
+    sink?.full.push(...(ranges ?? []));
+    return OWNER + (EXACT_NAME - OWNER) * (0.4 * owner + 0.6 * name);
   }
-  return matchPathParts(entry, term.parts);
+  return matchPathParts(entry, term.parts, sink);
 }
 
 /** Fallback when the slash does not line up: every part must still match the full name. */
-function matchPathParts(entry: IndexedRepo, parts: readonly string[]): TermMatch | null {
+function matchPathParts(
+  entry: IndexedRepo,
+  parts: readonly string[],
+  sink: RangeSink | null,
+): number {
+  // Buffered so that a failing later part leaves no ranges of earlier parts behind.
+  const partSink: RangeSink | null = sink === null ? null : { full: [], description: [] };
   let total = 0;
-  const full: HighlightRange[] = [];
   for (const part of parts) {
-    const match = matchPlainInFullName(entry, part);
-    if (match === null) {
-      return null;
+    const score = matchPlainInFullName(entry, part, partSink);
+    if (score === NO_MATCH) {
+      return NO_MATCH;
     }
-    total += match.score;
-    full.push(...match.full);
+    total += score;
   }
-  const average = total / parts.length / EXACT_NAME;
-  return { score: PATH_PARTS + PATH_PARTS_RANGE * average, full, description: [] };
+  sink?.full.push(...(partSink?.full ?? []));
+  return PATH_PARTS + (PATH_PARTS_RANGE * total) / parts.length / EXACT_NAME;
 }
 
-function matchTerm(entry: IndexedRepo, term: Term): TermMatch | null {
-  const match =
-    term.kind === 'plain' ? matchPlainInFullName(entry, term.text) : matchPath(entry, term);
-  return match ?? matchDescription(entry, term.text);
+function matchTerm(entry: IndexedRepo, term: Term, sink: RangeSink | null): number {
+  const score =
+    term.kind === 'plain'
+      ? matchPlainInFullName(entry, term.text, sink)
+      : matchPath(entry, term, sink);
+  return score !== NO_MATCH ? score : matchDescription(entry, term.text, sink);
 }
 
 function parseTerm(raw: string): Term | null {
@@ -346,22 +365,26 @@ function compareHits(a: Hit, b: Hit): number {
   return a.score !== b.score ? b.score - a.score : a.entry.nameRank - b.entry.nameRank;
 }
 
-function toResult(hit: Hit): RepoSearchResult {
+function toOriginalRanges(
+  folded: FoldedText,
+  ranges: readonly HighlightRange[],
+): HighlightRange[] {
+  return mergeRanges(ranges.map(([start, end]) => toOriginalRange(folded, start, end)));
+}
+
+function toResult(hit: Hit, terms: readonly Term[]): RepoSearchResult {
   const { entry } = hit;
-  const full: HighlightRange[] = [];
-  const description: HighlightRange[] = [];
-  for (const match of hit.matches) {
-    for (const [start, end] of match.full) {
-      full.push(toOriginalRange(entry.full, start, end));
-    }
-    for (const [start, end] of match.description) {
-      description.push(toOriginalRange(entry.description, start, end));
-    }
+  const sink: RangeSink = { full: [], description: [] };
+  for (const term of terms) {
+    matchTerm(entry, term, sink);
   }
   return {
     repo: entry.repo,
     score: hit.score,
-    highlights: { fullName: mergeRanges(full), description: mergeRanges(description) },
+    highlights: {
+      fullName: toOriginalRanges(entry.full, sink.full),
+      description: toOriginalRanges(entry.description, sink.description),
+    },
   };
 }
 
@@ -413,28 +436,26 @@ export function createRepoSearcher(
     }
 
     const time = now();
-    const hits: Hit[] = [];
+    const top = createTopK(limit, compareHits);
     for (const entry of entries) {
       if (!accepts(entry)) {
         continue;
       }
       let score = 0;
-      const matches: TermMatch[] = [];
       for (const term of terms) {
-        const match = matchTerm(entry, term);
-        if (match === null) {
+        const termScore = matchTerm(entry, term, null);
+        if (termScore === NO_MATCH) {
+          score = NO_MATCH;
           break;
         }
-        score += match.score;
-        matches.push(match);
+        score += termScore;
       }
-      if (matches.length === terms.length) {
+      if (score !== NO_MATCH) {
         score += recencyBonus(entry.pushedAt, time) - penalty(entry.repo);
-        hits.push({ entry, score, matches });
+        top.offer({ entry, score });
       }
     }
-    hits.sort(compareHits);
-    return hits.slice(0, limit).map(toResult);
+    return top.items().map((hit) => toResult(hit, terms));
   }
 
   return { size: entries.length, search };

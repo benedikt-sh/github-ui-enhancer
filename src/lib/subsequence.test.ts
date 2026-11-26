@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { matchSubsequence } from './subsequence.ts';
+import { matchSubsequence, NOT_A_SUBSEQUENCE } from './subsequence.ts';
 import { foldText, wordStarts } from './text-fold.ts';
 
-function match(original: string, pattern: string, from?: number, to?: number) {
+function match(original: string, pattern: string, from = 0, to = original.length) {
   const folded = foldText(original);
-  return matchSubsequence(folded.text, wordStarts(original, folded), pattern, from, to);
+  const marks = wordStarts(original, folded);
+  const positions: number[] = [];
+  const quality = matchSubsequence(folded.text, marks, pattern, from, to, positions);
+  const scoreOnly = matchSubsequence(folded.text, marks, pattern, from, to, null);
+  assert.equal(scoreOnly, quality);
+  return quality === NOT_A_SUBSEQUENCE ? null : { quality, positions };
 }
 
 describe('matchSubsequence', () => {
@@ -49,6 +54,11 @@ describe('matchSubsequence', () => {
   it('stays inside the given window', () => {
     assert.deepEqual(match('api/api-gateway', 'api', 4)?.positions, [4, 5, 6]);
     assert.equal(match('acme/api', 'ap', 0, 4), null);
+  });
+
+  it('grows its buffers for long texts', () => {
+    const long = `${'ab-'.repeat(200)}target`;
+    assert.deepEqual(match(long, 'target')?.positions, [600, 601, 602, 603, 604, 605]);
   });
 
   it('handles a single character pattern', () => {
