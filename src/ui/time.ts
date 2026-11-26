@@ -8,7 +8,7 @@ const DAY = 24 * HOUR;
 /** Like GitHub, older timestamps show a date instead of "N days ago". */
 const RELATIVE_DAYS = 30;
 
-function toTime(value: DateInput): number {
+export function toTimestamp(value: DateInput): number {
   return value instanceof Date ? value.getTime() : new Date(value).getTime();
 }
 
@@ -18,8 +18,8 @@ function plural(count: number, unit: string): string {
 
 /** "Nov 3" in the current year, "Nov 3, 2024" otherwise, in the user's time zone. */
 export function formatShortDate(value: DateInput, now: DateInput): string {
-  const date = new Date(toTime(value));
-  const sameYear = date.getFullYear() === new Date(toTime(now)).getFullYear();
+  const date = new Date(toTimestamp(value));
+  const sameYear = date.getFullYear() === new Date(toTimestamp(now)).getFullYear();
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
@@ -29,8 +29,8 @@ export function formatShortDate(value: DateInput, now: DateInput): string {
 
 /** Returns an empty string for invalid dates. Future dates (clock skew) count as "just now". */
 export function formatRelativeTime(value: DateInput, now: DateInput): string {
-  const time = toTime(value);
-  const reference = toTime(now);
+  const time = toTimestamp(value);
+  const reference = toTimestamp(now);
   if (Number.isNaN(time) || Number.isNaN(reference)) {
     return '';
   }
@@ -56,7 +56,7 @@ export function formatRelativeTime(value: DateInput, now: DateInput): string {
 
 export function formatAbsoluteTime(value: DateInput): string {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(toTime(value)),
+    new Date(toTimestamp(value)),
   );
 }
 
@@ -80,7 +80,7 @@ export function formatDuration(milliseconds: number): string {
 
 /** A `<time>` element with the relative text and the full timestamp as tooltip. */
 export function relativeTime(value: DateInput, now: DateInput): HTMLTimeElement {
-  const time = toTime(value);
+  const time = toTimestamp(value);
   if (Number.isNaN(time)) {
     return h('time', { className: 'ghx-time' });
   }
