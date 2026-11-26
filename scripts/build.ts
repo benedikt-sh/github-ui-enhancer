@@ -34,7 +34,7 @@ function buildOptions(target: BrowserTarget): esbuild.BuildOptions {
 
 function cssOptions(target: BrowserTarget): esbuild.BuildOptions {
   return {
-    entryPoints: { content: 'src/content/content.css' },
+    entryPoints: { content: 'src/content/content.css', options: 'src/options/options.css' },
     outdir: join('dist', target),
     bundle: true,
     minify: !watch,
