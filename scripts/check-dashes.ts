@@ -1,12 +1,15 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 import { findLongDashes, formatHit, isCheckedFile } from './lib/long-dashes.ts';
 
 const listed = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
   encoding: 'utf8',
 });
-const paths = listed.split('\n').filter((path) => path !== '' && isCheckedFile(path));
+// The index still lists files deleted in the working tree until the deletion is staged.
+const paths = listed
+  .split('\n')
+  .filter((path) => path !== '' && isCheckedFile(path) && existsSync(path));
 const hits = findLongDashes(paths.map((path) => ({ path, content: readFileSync(path, 'utf8') })));
 
 for (const hit of hits) {
