@@ -21,15 +21,16 @@ export interface RepoSearchResult {
 
 export interface RepoSearchOptions {
   /** Maximum number of results, defaults to {@link DEFAULT_SEARCH_LIMIT}. */
-  readonly limit?: number;
+  readonly limit?: number | undefined;
   /** Only repos of this owner, compared case-insensitively. Empty means all owners. */
-  readonly owner?: string;
-  readonly includeArchived?: boolean;
+  readonly owner?: string | undefined;
+  /** Archived repos are hidden unless this is true. */
+  readonly includeArchived?: boolean | undefined;
 }
 
 export interface RepoSearcherOptions {
   /** Clock for the recency bonus in epoch milliseconds, read once per search. */
-  readonly now?: () => number;
+  readonly now?: (() => number) | undefined;
 }
 
 export interface RepoSearcher {
@@ -39,8 +40,10 @@ export interface RepoSearcher {
 
 export const DEFAULT_SEARCH_LIMIT = 50;
 
-// Per-term tiers are 10 apart and the extras within a tier stay below 5, so a stronger
-// kind of match always outranks a weaker one for the same term. Recency adds at most 3.
+// Score bands per term: exact 100, prefix 90-95, word start 80-85, substring 70-75,
+// owner 60-65, subsequence 30-50, description 20-24. The bands do not overlap, so a stronger
+// kind of match always wins for the same term. Recency adds at most 3 per repo; the archived
+// and fork penalties are larger on purpose and can move a repo below the next band.
 const EXACT_NAME = 100;
 const NAME_PREFIX = 90;
 const NAME_WORD_START = 80;
