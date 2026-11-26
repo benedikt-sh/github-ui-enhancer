@@ -1,0 +1,22 @@
+/*
+ * Hiding of GitHub's start page. Container selectors mirror CONTAINER_SELECTORS in
+ * selectors.ts. GitHub's nodes are only hidden, never removed: the original dashboard is a
+ * React app that may crash or re-render when its nodes disappear.
+ */
+
+/* Injected at document_start, before the controller knows whether the user is logged in. */
+html.ghx-pending :is(main, [role='main'], .application-main) {
+  visibility: hidden !important;
+}
+
+/* !important because Primer utilities like .d-flex set display with !important. */
+[data-ghx-mount='first-child'][data-ghx-view='dashboard'] > :not(#ghx-root) {
+  display: none !important;
+}
+
+/* Last resort below the header: overlays and portals that follow the content stay usable. */
+[data-ghx-mount='after-header'][data-ghx-view='dashboard']
+  > #ghx-root
+  ~ :not(dialog, [popover], [id*='portal' i]) {
+  display: none !important;
+}
