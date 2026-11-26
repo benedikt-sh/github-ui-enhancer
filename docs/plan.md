@@ -64,7 +64,7 @@ Phase 1 läuft mit 6 Subagents parallel, Phase 2 mit bis zu 8. Die Widgets (W1 b
 ### P0 Tooling
 
 - `git init`, `.gitignore`, `.editorconfig`
-- `package.json` mit Dev-Abhängigkeiten `typescript`, `esbuild`, `@types/chrome`, `happy-dom`
+- `package.json` mit Dev-Abhängigkeiten `typescript`, `esbuild`, `@types/chrome`, `@types/node`, `happy-dom`
 - `tsconfig.json` streng: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noUnusedLocals`, `noUnusedParameters`
 - `scripts/build.ts`: bündelt Background, Content Script und Options-Seite, schreibt `dist/chrome/` und `dist/firefox/` mit unterschiedlichem `background`-Key bzw. `browser_specific_settings`, Watch-Modus für die Entwicklung
 - Test-Skript: `node --test` mit Coverage und festen Schwellen (Ziel: Zeilen und Funktionen 95 %, Branches 90 %), ausgenommen nur Einstiegspunkte und Tests
