@@ -28,7 +28,7 @@ export function findLongDashes(files: readonly SourceFile[]): LongDashHit[] {
 const CHECKED_EXTENSIONS = ['.ts', '.js', '.json', '.md', '.css', '.html', '.yml', '.yaml'];
 
 export function isCheckedFile(path: string): boolean {
-  if (path.startsWith('node_modules/') || path === 'package-lock.json') {
+  if (path.startsWith('node_modules/') || path === 'pnpm-lock.yaml') {
     return false;
   }
   return CHECKED_EXTENSIONS.some((extension) => path.endsWith(extension));

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=24"
   },
@@ -12,11 +13,11 @@
     "typecheck": "tsc",
     "lint:dashes": "node scripts/check-dashes.ts",
     "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.ts\" --test-coverage-include=\"scripts/lib/**/*.ts\" --test-coverage-exclude=\"**/*.test.ts\" --test-coverage-exclude=\"src/*/index.ts\" --test-coverage-lines=95 --test-coverage-functions=95 --test-coverage-branches=90 \"src/**/*.test.ts\" \"scripts/**/*.test.ts\" \"test/**/*.test.ts\"",
-    "check": "npm run typecheck && npm run lint:dashes && npm test && npm run build"
+    "check": "pnpm typecheck && pnpm lint:dashes && pnpm test && pnpm build"
   },
   "devDependencies": {
     "@types/chrome": "0.3.8",
-    "@types/node": "26.6.11",
+    "@types/node": "26.6.10",
     "esbuild": "0.28.2",
     "happy-dom": "21.0.4",
     "typescript": "7.0.2"

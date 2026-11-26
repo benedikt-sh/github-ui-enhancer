@@ -23,6 +23,8 @@ Hintergrund, Recherche und Begründungen stehen in `docs/machbarkeit.md`, der Um
 
 ### Abhängigkeiten
 
+- Paketmanager ist pnpm, nicht npm. Auch `npx` vermeiden, stattdessen `pnpm exec` bzw. `pnpm dlx`.
+- pnpm lehnt Pakete ab, die jünger als die Mindestwartezeit sind. Dafür keine Ausnahme eintragen, sondern eine ältere Version wählen.
 - So wenige Libraries wie möglich. Laufzeit-Abhängigkeiten gibt es grundsätzlich keine.
 - Kleine Helfer (DOM-Aufbau, Fuzzy-Suche, Cache) werden selbst geschrieben, statt ein Paket dafür zu holen.
 - Jede neue Abhängigkeit, auch eine reine Dev-Abhängigkeit, nur nach Rückfrage beim Nutzer.

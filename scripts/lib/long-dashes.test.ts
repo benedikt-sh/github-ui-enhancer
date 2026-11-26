@@ -33,7 +33,8 @@ describe('isCheckedFile', () => {
 
   it('skips dependencies, the lockfile and binary files', () => {
     assert.equal(isCheckedFile('node_modules/x/index.js'), false);
-    assert.equal(isCheckedFile('package-lock.json'), false);
+    assert.equal(isCheckedFile('pnpm-lock.yaml'), false);
+    assert.equal(isCheckedFile('pnpm-workspace.yaml'), true);
     assert.equal(isCheckedFile('icons/icon.png'), false);
   });
 });
