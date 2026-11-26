@@ -2,8 +2,8 @@ export type BrowserTarget = 'chrome' | 'firefox';
 
 export const BROWSER_TARGETS: readonly BrowserTarget[] = ['chrome', 'firefox'];
 
-export const MIN_CHROME_VERSION = '121';
-export const MIN_FIREFOX_VERSION = '121.0';
+export const MIN_CHROME_VERSION = '126';
+export const MIN_FIREFOX_VERSION = '128.0';
 
 // Placeholder add-on id. AMO signing needs a stable id, so changing it later orphans
 // existing Firefox installs and their stored tokens.
