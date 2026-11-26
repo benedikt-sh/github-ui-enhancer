@@ -129,7 +129,8 @@ describe('safeUrl', () => {
   });
 
   it('rejects other schemes, relative and empty values', () => {
-    for (const value of ['javascript:alert(1)', 'data:text/html,x', '/relative', '', null, undefined]) {
+    const values = ['javascript:alert(1)', 'data:text/html,x', '/relative', '', null, undefined];
+    for (const value of values) {
       assert.equal(safeUrl(value), null, String(value));
     }
   });

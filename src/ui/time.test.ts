@@ -53,7 +53,8 @@ describe('formatRelativeTime', () => {
   });
 
   it('accepts ISO strings and timestamps', () => {
-    assert.equal(formatRelativeTime('2026-11-26T11:58:00Z', '2026-11-26T12:00:00Z'), '2 minutes ago');
+    const text = formatRelativeTime('2026-11-26T11:58:00Z', '2026-11-26T12:00:00Z');
+    assert.equal(text, '2 minutes ago');
   });
 
   it('returns an empty string for invalid dates', () => {
