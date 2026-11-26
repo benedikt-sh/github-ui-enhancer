@@ -12,7 +12,7 @@
     "watch": "node scripts/build.ts --watch",
     "typecheck": "tsc",
     "lint:dashes": "node scripts/check-dashes.ts",
-    "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.ts\" --test-coverage-include=\"scripts/lib/**/*.ts\" --test-coverage-exclude=\"**/*.test.ts\" --test-coverage-exclude=\"src/*/index.ts\" --test-coverage-lines=95 --test-coverage-functions=95 --test-coverage-branches=90 \"src/**/*.test.ts\" \"scripts/**/*.test.ts\" \"test/**/*.test.ts\"",
+    "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.ts\" --test-coverage-include=\"scripts/lib/**/*.ts\" --test-coverage-exclude=\"**/*.test.ts\" --test-coverage-exclude=\"src/*/index.ts\" --test-coverage-exclude=\"**/*.fixture.ts\" --test-coverage-lines=95 --test-coverage-functions=95 --test-coverage-branches=90 \"src/**/*.test.ts\" \"scripts/**/*.test.ts\" \"test/**/*.test.ts\"",
     "check": "pnpm typecheck && pnpm lint:dashes && pnpm test && pnpm build"
   },
   "devDependencies": {
