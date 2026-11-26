@@ -92,7 +92,8 @@ describe('parseNextLink', () => {
   });
 
   it('keeps commas inside the URL and accepts unquoted and combined rel values', () => {
-    assert.equal(link('<https://x/search?q=a,b&page=2>; rel=next'), 'https://x/search?q=a,b&page=2');
+    const withComma = 'https://x/search?q=a,b&page=2';
+    assert.equal(link(`<${withComma}>; rel=next`), withComma);
     assert.equal(link('<https://x/?page=2>; title="t"; rel="last next"'), 'https://x/?page=2');
   });
 

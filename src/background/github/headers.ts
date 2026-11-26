@@ -12,7 +12,10 @@ function readInteger(headers: Headers, name: string): number | null {
   return value !== undefined && INTEGER.test(value) ? Number(value) : null;
 }
 
-export function parseRateLimit(headers: Headers, fallbackResource: string): RateLimitSnapshot | null {
+export function parseRateLimit(
+  headers: Headers,
+  fallbackResource: string,
+): RateLimitSnapshot | null {
   const limit = readInteger(headers, 'x-ratelimit-limit');
   const remaining = readInteger(headers, 'x-ratelimit-remaining');
   const reset = readInteger(headers, 'x-ratelimit-reset');
