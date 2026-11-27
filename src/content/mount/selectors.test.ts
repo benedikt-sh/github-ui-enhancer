@@ -160,6 +160,23 @@ describe('findChangelogWidgets', () => {
     );
   });
 
+  it('stops at the first landmark and never takes a container of other page parts', () => {
+    render(`
+      <div id="page">
+        <main id="main"></main>
+        <div id="column"><aside id="outer"><section id="card">
+          <a href="https://github.blog/changelog/x">X</a>
+        </section></aside></div>
+      </div>
+      <div id="wrapper"><div id="inner"><a href="https://github.blog/changelog/y">Y</a></div>
+        <header>No links yet</header></div>`);
+
+    assert.deepEqual(
+      findChangelogWidgets(document, null).map((element) => element.id),
+      ['card', 'inner'],
+    );
+  });
+
   it('stops at main and ignores matches inside the excluded root', () => {
     render(`
       <main id="main"><a id="link" href="https://github.blog/changelog/x">X</a></main>

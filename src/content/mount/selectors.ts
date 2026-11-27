@@ -76,10 +76,14 @@ export const CHANGELOG_SELECTORS = [
 const CHANGELOG_LINK = 'a[href^="https://github.blog/changelog"]';
 const BLOG_ORIGIN = 'https://github.blog/';
 const STOP_AT = 'main, body, html';
+const PAGE_PARTS = 'main, header, #ghx-root';
+const LANDMARKS = 'section, aside, article, [role="complementary"]';
 
 /**
  * GitHub's widget markup changes often, its links to the GitHub blog do not. The widget is the
- * largest ancestor of such a link that contains nothing but blog links.
+ * nearest landmark around such a link that holds nothing but blog links. Without a landmark it
+ * is the largest such ancestor that does not contain other parts of the page, because content
+ * rendered later may not have its links yet.
  */
 export function findChangelogWidgets(document: Document, exclude: Element | null): Element[] {
   const found: Element[] = [];
@@ -99,10 +103,17 @@ export function findChangelogWidgets(document: Document, exclude: Element | null
 function changelogCard(link: Element): Element {
   let card = link;
   for (let parent = link.parentElement; parent !== null; parent = parent.parentElement) {
-    if (parent.matches(STOP_AT) || !onlyBlogLinks(parent)) {
+    if (
+      parent.matches(STOP_AT) ||
+      parent.querySelector(PAGE_PARTS) !== null ||
+      !onlyBlogLinks(parent)
+    ) {
       break;
     }
     card = parent;
+    if (parent.matches(LANDMARKS)) {
+      break;
+    }
   }
   return card;
 }
