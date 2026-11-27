@@ -258,3 +258,32 @@
 .ghx-maintenance__status {
   margin-top: 12px;
 }
+
+.ghx-tweaks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-16, 16px);
+}
+
+.ghx-tweaks p {
+  margin: 0;
+}
+
+.ghx-tweaks__area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-12, 12px);
+  margin: 0;
+  padding: var(--base-size-16, 16px);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+}
+
+.ghx-tweaks__legend {
+  padding: 0 var(--base-size-4, 4px);
+  font-weight: 600;
+}
+
+.ghx-tweaks__status:empty {
+  display: none;
+}

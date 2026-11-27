@@ -1,17 +1,21 @@
 import type { RequestSender } from '../shared/messages.ts';
+import type { KeyValueStore } from '../shared/storage.ts';
 import { h } from '../ui/dom.ts';
 import { addTokenForm } from './add-token-form.ts';
 import { guidance } from './guidance.ts';
 import { maintenance } from './maintenance.ts';
 import { tokenList } from './token-list.ts';
+import { tweaksSection } from './tweaks.ts';
 
 export interface OptionsPageDeps {
   readonly send: RequestSender;
+  /** `storage.sync`, holds the tweaks. */
+  readonly settingsStore: KeyValueStore;
   readonly now?: () => Date;
 }
 
 export interface OptionsPage {
-  /** Settles when the first token list request has finished, successfully or not. */
+  /** Settles when the token list and the tweaks have loaded, successfully or not. */
   readonly loaded: Promise<void>;
   reload(): Promise<void>;
 }
@@ -25,6 +29,7 @@ export function renderOptionsPage(root: HTMLElement, deps: OptionsPageDeps): Opt
     onAdded: (info) => list.upsert(info),
     onStale: () => void list.refresh(),
   });
+  const tweaks = tweaksSection({ store: deps.settingsStore });
 
   root.classList.add('ghx-options');
   root.replaceChildren(
@@ -46,11 +51,18 @@ export function renderOptionsPage(root: HTMLElement, deps: OptionsPageDeps): Opt
     ),
     h(
       'section',
+      { className: 'ghx-options__section', 'aria-labelledby': 'ghx-options-tweaks' },
+      h('h2', { className: 'ghx-options__heading', id: 'ghx-options-tweaks' }, 'Tweaks'),
+      tweaks.element,
+    ),
+    h(
+      'section',
       { className: 'ghx-options__section', 'aria-labelledby': 'ghx-options-maintenance' },
       h('h2', { className: 'ghx-options__heading', id: 'ghx-options-maintenance' }, 'Maintenance'),
       maintenance({ send }),
     ),
   );
 
-  return { loaded: list.load(), reload: () => list.load() };
+  const loaded = Promise.all([list.load(), tweaks.loaded]).then(() => undefined);
+  return { loaded, reload: () => list.load() };
 }

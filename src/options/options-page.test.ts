@@ -4,7 +4,10 @@ import { after, afterEach, before, describe, it } from 'node:test';
 import { installDom } from '../../test/dom.ts';
 import type { DomEnvironment } from '../../test/dom.ts';
 import { createFakeMessaging } from '../../test/fakes/runtime.ts';
+import { createFakeStorageArea } from '../../test/fakes/storage.ts';
 import { createRequestSender, isRequestMessage } from '../shared/messages.ts';
+import type { RequestSender } from '../shared/messages.ts';
+import { createAreaStore } from '../shared/storage.ts';
 import type { TokenInfo } from '../shared/tokens.ts';
 import {
   createFakeSender,
@@ -15,6 +18,7 @@ import {
   tokenInfo,
 } from './fake-sender.fixture.ts';
 import { renderOptionsPage } from './options-page.ts';
+import type { OptionsPage } from './options-page.ts';
 
 let dom: DomEnvironment;
 let root: HTMLElement;
@@ -30,6 +34,14 @@ after(async () => {
 afterEach(() => {
   document.body.replaceChildren();
 });
+
+function render(send: RequestSender): OptionsPage {
+  return renderOptionsPage(createRoot(), {
+    send,
+    settingsStore: createAreaStore(createFakeStorageArea()),
+    now: () => NOW,
+  });
+}
 
 function createRoot(): HTMLElement {
   root = document.createElement('main');
@@ -47,9 +59,9 @@ function tokenIds(): (string | undefined)[] {
 }
 
 describe('renderOptionsPage', () => {
-  it('renders guidance, token list, add form and maintenance', async () => {
+  it('renders guidance, token list, add form, tweaks and maintenance', async () => {
     const sender = createFakeSender({ 'tokens.list': () => [tokenInfo()] });
-    const page = renderOptionsPage(createRoot(), { send: sender.send, now: () => NOW });
+    const page = render(sender.send);
 
     assert.ok(root.classList.contains('ghx-options'));
     assert.ok(root.querySelector('.ghx-state--loading'));
@@ -60,8 +72,10 @@ describe('renderOptionsPage', () => {
       'Access tokens',
       'Your tokens',
       'Add a token',
+      'Tweaks',
       'Maintenance',
     ]);
+    assert.ok(root.querySelector('.ghx-tweaks'));
     assert.ok(root.querySelector('.ghx-guidance'));
     assert.ok(root.querySelector('form.ghx-add-token'));
     assert.ok(root.querySelector('.ghx-maintenance'));
@@ -73,7 +87,7 @@ describe('renderOptionsPage', () => {
     const sender = createFakeSender({
       'tokens.list': () => [tokenInfo({ lastCheckedAt: new Date().toISOString() })],
     });
-    await renderOptionsPage(createRoot(), { send: sender.send }).loaded;
+    await render(sender.send).loaded;
 
     assert.match(root.textContent ?? '', /Last checked just now/);
   });
@@ -81,7 +95,7 @@ describe('renderOptionsPage', () => {
   it('shows a newly added token in the list', async () => {
     const added = tokenInfo({ id: 'token-2', hint: 'wxyz' });
     const sender = createFakeSender({ 'tokens.list': () => [], 'tokens.add': () => added });
-    await renderOptionsPage(createRoot(), { send: sender.send, now: () => NOW }).loaded;
+    await render(sender.send).loaded;
     assert.equal(root.querySelector('.ghx-state__title')?.textContent, 'No tokens yet');
 
     const secret = root.querySelector<HTMLInputElement>('input[name="secret"]');
@@ -100,7 +114,7 @@ describe('renderOptionsPage', () => {
       'tokens.list': () => lists.shift() ?? [],
       'tokens.add': rejectWith({ kind: 'rate_limited', message: 'API rate limit exceeded' }),
     });
-    await renderOptionsPage(createRoot(), { send: sender.send, now: () => NOW }).loaded;
+    await render(sender.send).loaded;
 
     const secret = root.querySelector<HTMLInputElement>('input[name="secret"]');
     assert.ok(secret);
@@ -117,7 +131,7 @@ describe('renderOptionsPage', () => {
     const pending = deferred<TokenInfo[]>();
     const lists = [Promise.resolve([]), pending.promise];
     const sender = createFakeSender({ 'tokens.list': () => lists.shift() ?? [] });
-    const page = renderOptionsPage(createRoot(), { send: sender.send, now: () => NOW });
+    const page = render(sender.send);
     await page.loaded;
 
     const reloaded = page.reload();
@@ -133,7 +147,7 @@ describe('renderOptionsPage with the messaging runtime', () => {
   it('shows an error state with retry when the background is unreachable', async () => {
     const messaging = createFakeMessaging();
     const send = createRequestSender(messaging.extensionPage);
-    await renderOptionsPage(createRoot(), { send, now: () => NOW }).loaded;
+    await render(send).loaded;
 
     const state = root.querySelector('.ghx-state--error');
     assert.equal(state?.querySelector('.ghx-state__title')?.textContent, 'Could not load tokens');
