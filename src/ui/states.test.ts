@@ -123,6 +123,13 @@ describe('errorState', () => {
     actionUrl: 'https://github.com/orgs/octo-org/sso?authorization_request=1',
   };
 
+  it('shows identical errors only once', () => {
+    const forbidden: ApiErrorInfo = { kind: 'forbidden', message: 'No access', owner: 'acme' };
+    const element = errorState([forbidden, { ...forbidden }, sso, { ...forbidden, owner: 'x' }]);
+
+    assert.equal(element.querySelectorAll('.ghx-errors > li').length, 3);
+  });
+
   it('renders an alert with the default title and no actions', () => {
     const element = errorState([]);
 

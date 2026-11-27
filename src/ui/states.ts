@@ -128,6 +128,19 @@ function errorItem(error: ApiErrorInfo): HTMLLIElement {
   );
 }
 
+/** Several tokens or batched requests often fail the same way, which is shown only once. */
+export function uniqueErrors(errors: readonly ApiErrorInfo[]): ApiErrorInfo[] {
+  const seen = new Set<string>();
+  return errors.filter((error) => {
+    const key = JSON.stringify([error.kind, error.owner, error.message, error.actionUrl]);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
 export function errorState(
   errors: readonly ApiErrorInfo[],
   options: ErrorStateOptions = {},
@@ -145,7 +158,9 @@ export function errorState(
     { className: 'ghx-state ghx-state--error', role: 'alert' },
     icon('alert', { className: 'ghx-state__icon' }),
     h('p', { className: 'ghx-state__title' }, options.title ?? 'Could not load data'),
-    errors.length > 0 ? h('ul', { className: 'ghx-errors' }, errors.map(errorItem)) : null,
+    errors.length > 0
+      ? h('ul', { className: 'ghx-errors' }, uniqueErrors(errors).map(errorItem))
+      : null,
     actions.length > 0 ? h('div', { className: 'ghx-state__actions' }, actions) : null,
   );
 }

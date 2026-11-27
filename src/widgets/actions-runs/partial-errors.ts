@@ -1,6 +1,6 @@
 import type { ApiErrorInfo } from '../../shared/errors.ts';
 import { button, notice } from '../../ui/forms.ts';
-import { describeApiError, isTokenError } from '../../ui/states.ts';
+import { describeApiError, isTokenError, uniqueErrors } from '../../ui/states.ts';
 
 /** Warning shown above data that arrived only partially, null without errors. */
 export function partialErrorNotice(
@@ -16,7 +16,7 @@ export function partialErrorNotice(
     : [];
   return notice({
     variant: 'warning',
-    message: errors.map(describeApiError).join(' '),
+    message: uniqueErrors(errors).map(describeApiError).join(' '),
     actions: settings,
   });
 }
