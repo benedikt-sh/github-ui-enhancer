@@ -222,6 +222,32 @@ describe('repoPicker', () => {
     );
   });
 
+  it('offers no settings button without a settings callback', async () => {
+    const hasSettings = (root: HTMLElement): boolean =>
+      [...root.querySelectorAll('button')].some((b) => b.textContent === 'Open settings');
+
+    const empty = setup({ onOpenSettings: null }, []);
+    const emptyPicker = repoPicker(empty.options);
+    await settle();
+    assert.ok(emptyPicker.root.textContent?.includes('No repositories'));
+    assert.equal(hasSettings(emptyPicker.root), false);
+
+    const tokenErrors = [{ kind: 'unauthorized' as const, message: '' }];
+    const failed = setup({ onOpenSettings: null });
+    failed.data.handle('repoIndex', async () => dataResult([], { errors: tokenErrors }));
+    const failedPicker = repoPicker(failed.options);
+    await settle();
+    assert.ok(failedPicker.root.querySelector('.ghx-state--error'));
+    assert.equal(hasSettings(failedPicker.root), false);
+
+    const partial = setup({ onOpenSettings: null });
+    partial.data.handle('repoIndex', async () => dataResult(REPOS, { errors: tokenErrors }));
+    const partialPicker = repoPicker(partial.options);
+    await settle();
+    assert.ok(partialPicker.root.querySelector('.ghx-notice--warning'));
+    assert.equal(hasSettings(partialPicker.root), false);
+  });
+
   it('shows rejected requests as error with retry', async () => {
     const { options, data } = setup();
     data.handle('repoIndex', async () => {

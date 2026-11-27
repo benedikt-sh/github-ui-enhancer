@@ -18,7 +18,8 @@ export interface RepoPickerOptions {
   readonly now: () => number;
   readonly selected: RepoRef | null;
   readonly onSelect: (repo: RepoSummary) => void;
-  readonly onOpenSettings: () => void;
+  /** Null where the settings cannot be opened, e.g. in the config form. */
+  readonly onOpenSettings: (() => void) | null;
   readonly limit?: number;
   readonly inputId?: string;
 }
@@ -29,13 +30,14 @@ export interface RepoPicker {
   setSelected(repo: RepoRef | null): void;
 }
 
-function isSameRepo(a: RepoRef | null, b: RepoRef): boolean {
+export function isSameRepo(a: RepoRef | null, b: RepoRef): boolean {
   return a !== null && sameOwner(a.owner, b.owner) && sameOwner(a.name, b.name);
 }
 
 /** Type-to-filter list over the repo index, for choosing the repo of a widget. */
 export function repoPicker(options: RepoPickerOptions): RepoPicker {
   const { data, signal, onOpenSettings } = options;
+  const settingsOption = onOpenSettings ? { onOpenSettings } : {};
   const limit = options.limit ?? DEFAULT_PICKER_LIMIT;
   let selected = options.selected;
   let searcher: RepoSearcher | null = null;
@@ -122,14 +124,16 @@ export function repoPicker(options: RepoPickerOptions): RepoPicker {
         result.errors.length > 0
           ? errorState(result.errors, {
               title: 'Could not load repositories',
-              onOpenSettings,
+              ...settingsOption,
               onRetry: () => load(true),
             })
           : emptyState({
               icon: 'repo',
               title: 'No repositories',
               description: 'Add an access token to see your repositories.',
-              actions: [button({ label: 'Open settings', icon: 'gear', onClick: onOpenSettings })],
+              actions: onOpenSettings
+                ? [button({ label: 'Open settings', icon: 'gear', onClick: onOpenSettings })]
+                : [],
             }),
       );
       return;
@@ -156,7 +160,7 @@ export function repoPicker(options: RepoPickerOptions): RepoPicker {
           results.replaceChildren(
             errorState([toApiErrorInfo(error)], {
               title: 'Could not load repositories',
-              onOpenSettings,
+              ...settingsOption,
               onRetry: () => load(true),
             }),
           );

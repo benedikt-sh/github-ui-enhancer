@@ -5,12 +5,13 @@ import { describeApiError, isTokenError } from '../../ui/states.ts';
 /** Warning shown above data that arrived only partially, null without errors. */
 export function partialErrorNotice(
   errors: readonly ApiErrorInfo[],
-  onOpenSettings: () => void,
+  onOpenSettings: (() => void) | null,
 ): HTMLDivElement | null {
   if (errors.length === 0) {
     return null;
   }
-  const settings = errors.some((error) => isTokenError(error.kind))
+  const showSettings = onOpenSettings && errors.some((error) => isTokenError(error.kind));
+  const settings = showSettings
     ? [button({ label: 'Open settings', icon: 'gear', size: 'small', onClick: onOpenSettings })]
     : [];
   return notice({
