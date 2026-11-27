@@ -2,20 +2,13 @@ import { createRepoSearcher } from '../../lib/fuzzy.ts';
 import type { RepoSearcher } from '../../lib/fuzzy.ts';
 import type { DataResult, WidgetData } from '../../shared/data.ts';
 import { toApiErrorInfo } from '../../shared/errors.ts';
-import type { ApiErrorInfo } from '../../shared/errors.ts';
 import { sameOwner } from '../../shared/repo.ts';
 import type { RepoRef, RepoSummary } from '../../shared/types.ts';
 import { appendChildren, h } from '../../ui/dom.ts';
-import type { Child } from '../../ui/dom.ts';
-import { button, notice, textInput } from '../../ui/forms.ts';
+import { button, textInput } from '../../ui/forms.ts';
 import { icon } from '../../ui/octicons.ts';
-import {
-  describeApiError,
-  emptyState,
-  errorState,
-  isTokenError,
-  loadingState,
-} from '../../ui/states.ts';
+import { emptyState, errorState, loadingState } from '../../ui/states.ts';
+import { partialErrorNotice } from './partial-errors.ts';
 
 export const DEFAULT_PICKER_LIMIT = 8;
 
@@ -38,20 +31,6 @@ export interface RepoPicker {
 
 function isSameRepo(a: RepoRef | null, b: RepoRef): boolean {
   return a !== null && sameOwner(a.owner, b.owner) && sameOwner(a.name, b.name);
-}
-
-function partialErrors(errors: readonly ApiErrorInfo[], onOpenSettings: () => void): Child {
-  if (errors.length === 0) {
-    return null;
-  }
-  const settings = errors.some((error) => isTokenError(error.kind))
-    ? [button({ label: 'Open settings', icon: 'gear', size: 'small', onClick: onOpenSettings })]
-    : [];
-  return notice({
-    variant: 'warning',
-    message: errors.map(describeApiError).join(' '),
-    actions: settings,
-  });
 }
 
 /** Type-to-filter list over the repo index, for choosing the repo of a widget. */
@@ -155,7 +134,7 @@ export function repoPicker(options: RepoPickerOptions): RepoPicker {
       );
       return;
     }
-    appendChildren(notices, [partialErrors(result.errors, onOpenSettings)]);
+    appendChildren(notices, [partialErrorNotice(result.errors, onOpenSettings)]);
     searcher = createRepoSearcher(result.data, { now: options.now });
     input.disabled = false;
     renderMatches();
