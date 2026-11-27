@@ -1,0 +1,128 @@
+/*
+ * Dashboard host layout. Widths depend on the space GitHub leaves for the root, not on the
+ * viewport, hence the container query.
+ */
+
+.ghx-host {
+  container-type: inline-size;
+  margin: var(--base-size-16, 16px) 0;
+  color: var(--fgColor-default, #1f2328);
+}
+
+.ghx-host-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-16, 16px);
+}
+
+.ghx-host-dashboard[hidden],
+.ghx-host-bar[hidden] {
+  display: none;
+}
+
+/* Toolbar */
+
+.ghx-host-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+}
+
+.ghx-host-toolbar__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-title-size-medium, 20px);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ghx-host-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+}
+
+/* Compact bar shown above GitHub's original page */
+
+.ghx-host-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-8, 8px) var(--base-size-12, 12px);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.ghx-host-bar__text {
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+/* Notices */
+
+.ghx-host-notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8, 8px);
+}
+
+.ghx-host-notices:not(:has(.ghx-notice)) {
+  display: none;
+}
+
+.ghx-host-tokens:empty,
+.ghx-host-save:empty {
+  display: none;
+}
+
+.ghx-host-notice-list {
+  margin: 0;
+  padding-left: var(--base-size-16, 16px);
+}
+
+/* Widgets */
+
+.ghx-host-singletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-16, 16px);
+}
+
+.ghx-host-singletons:empty {
+  display: none;
+}
+
+.ghx-host-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--base-size-16, 16px);
+}
+
+.ghx-host-grid > .ghx-state {
+  grid-column: 1 / -1;
+}
+
+.ghx-host-item {
+  min-width: 0;
+}
+
+.ghx-host-item--full {
+  grid-column: 1 / -1;
+}
+
+@container (max-width: 767px) {
+  .ghx-host-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ghx-host-config {
+  padding: var(--base-size-16, 16px);
+}
