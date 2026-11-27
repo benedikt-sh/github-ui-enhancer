@@ -5,3 +5,4 @@
 @import '../widgets/pr-list/pr-list.css';
 @import '../widgets/issue-list/issue-list.css';
 @import '../widgets/actions-runs/actions-runs.css';
+@import './tweaks/tweaks.css';
