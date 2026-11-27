@@ -1,0 +1,255 @@
+/* Repository search, rendered full width above all other widgets without a frame. */
+
+.ghx-repo-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8, 8px);
+  margin-bottom: var(--base-size-16, 16px);
+}
+
+.ghx-repo-search__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--base-size-8, 8px) var(--base-size-16, 16px);
+}
+
+.ghx-repo-search__field {
+  position: relative;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.ghx-repo-search__field-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--base-size-12, 12px);
+  color: var(--fgColor-muted, #59636e);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.ghx-repo-search .ghx-repo-search__input {
+  min-height: 40px;
+  padding-left: calc(var(--base-size-12, 12px) + 16px + var(--base-size-8, 8px));
+  font-size: var(--text-body-size-large, 16px);
+}
+
+.ghx-repo-search__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--base-size-8, 8px) var(--base-size-16, 16px);
+}
+
+.ghx-repo-search .ghx-repo-search__owner-filter {
+  width: auto;
+  max-width: 240px;
+}
+
+.ghx-repo-search__filters .ghx-checkbox {
+  margin: 0;
+}
+
+/* Status line */
+
+.ghx-repo-search__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-repo-search__status[hidden] {
+  display: none;
+}
+
+.ghx-repo-search__age::before {
+  content: '\00b7';
+  margin-right: var(--base-size-8, 8px);
+}
+
+.ghx-repo-search__stale {
+  padding: 0 var(--base-size-8, 8px);
+  border: 1px solid var(--borderColor-attention-muted, #d4a72c66);
+  border-radius: var(--borderRadius-full, 9999px);
+  background-color: var(--bgColor-attention-muted, #fff8c5);
+  color: var(--fgColor-attention, #9a6700);
+  line-height: 18px;
+}
+
+.ghx-repo-search__reload--busy .ghx-icon {
+  animation: ghx-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghx-repo-search__reload--busy .ghx-icon {
+    animation: none;
+  }
+}
+
+/* Partial errors stay compact so the results remain visible. */
+
+.ghx-repo-search__notices:empty {
+  display: none;
+}
+
+.ghx-repo-search__notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8, 8px);
+}
+
+.ghx-repo-search__notices .ghx-state {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--base-size-4, 4px) var(--base-size-8, 8px);
+  padding: var(--base-size-8, 8px) var(--base-size-12, 12px);
+  border: 1px solid var(--borderColor-danger-muted, #ff818266);
+  border-radius: var(--borderRadius-medium, 6px);
+  background-color: var(--bgColor-danger-muted, #ffebe9);
+  font-size: var(--text-body-size-small, 12px);
+  text-align: left;
+}
+
+.ghx-repo-search__notices .ghx-errors {
+  flex: 1 1 240px;
+}
+
+.ghx-repo-search__notices .ghx-state__actions {
+  justify-content: flex-start;
+}
+
+/* Results */
+
+.ghx-repo-search__results {
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  background-color: var(--bgColor-default, #ffffff);
+  overflow: hidden;
+}
+
+.ghx-repo-search__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ghx-repo-search__list:empty,
+.ghx-repo-search__state:empty {
+  display: none;
+}
+
+.ghx-repo-search__item + .ghx-repo-search__item {
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+}
+
+.ghx-repo-search__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  color: var(--fgColor-default, #1f2328);
+  text-decoration: none;
+}
+
+.ghx-repo-search__option:hover {
+  background-color: var(--bgColor-muted, #f6f8fa);
+  text-decoration: none;
+}
+
+/* The active option only matters while the input has focus, so it is not marked otherwise. */
+.ghx-repo-search:focus-within .ghx-repo-search__option[aria-selected='true'] {
+  background-color: var(--bgColor-accent-muted, #ddf4ff);
+  box-shadow: inset 2px 0 0 var(--fgColor-accent, #0969da);
+}
+
+.ghx-repo-search__option:focus-visible {
+  outline: 2px solid var(--focus-outlineColor, #0969da);
+  outline-offset: -2px;
+}
+
+.ghx-repo-search__visibility {
+  padding-top: 2px;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-repo-search__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ghx-repo-search__title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--base-size-4, 4px) var(--base-size-8, 8px);
+  line-height: 20px;
+}
+
+.ghx-repo-search__name {
+  overflow-wrap: anywhere;
+}
+
+.ghx-repo-search__owner {
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-repo-search__repo {
+  color: var(--fgColor-accent, #0969da);
+  font-weight: 600;
+}
+
+.ghx-repo-search__option:hover .ghx-repo-search__repo {
+  text-decoration: underline;
+}
+
+.ghx-repo-search__mark {
+  border-radius: 2px;
+  background-color: var(--bgColor-attention-muted, #fff8c5);
+  color: inherit;
+  font-weight: 600;
+}
+
+.ghx-repo-search__badge {
+  padding: 0 var(--base-size-8, 8px);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-full, 9999px);
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.ghx-repo-search__badge--archived {
+  border-color: var(--borderColor-attention-muted, #d4a72c66);
+  color: var(--fgColor-attention, #9a6700);
+}
+
+.ghx-repo-search__description {
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-repo-search__pushed {
+  flex-shrink: 0;
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+@media (max-width: 543px) {
+  .ghx-repo-search__pushed {
+    display: none;
+  }
+}
