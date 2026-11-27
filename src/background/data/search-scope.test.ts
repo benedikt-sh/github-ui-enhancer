@@ -31,6 +31,17 @@ describe('scopeSearchQuery', () => {
     assert.equal(scopeSearchQuery(QUERY, PERSONAL, [PERSONAL]), QUERY);
   });
 
+  it('leaves queries that already name repositories or owners alone', () => {
+    for (const query of [`${QUERY} repo:acme/api`, `${QUERY} ORG:acme`, `user:alice ${QUERY}`]) {
+      assert.equal(scopeSearchQuery(query, ACME, [PERSONAL, ACME]), query);
+      assert.equal(scopeSearchQuery(query, PERSONAL, [PERSONAL, ACME]), query);
+    }
+    assert.equal(
+      scopeSearchQuery(`${QUERY} -org:globex`, ACME, [PERSONAL, ACME]),
+      `${QUERY} -org:globex org:acme`,
+    );
+  });
+
   it('leaves tokens without owner or login unscoped', () => {
     assert.equal(scopeSearchQuery(QUERY, NO_OWNER, [PERSONAL, NO_OWNER]), QUERY);
     assert.equal(scopeSearchQuery(QUERY, NO_LOGIN, [PERSONAL, NO_LOGIN]), QUERY);

@@ -1,6 +1,8 @@
 import { sameOwner } from '../../shared/repo.ts';
 import type { ActiveToken } from '../tokens/token-registry.ts';
 
+const EXPLICIT_SCOPE = /(?:^|\s)(?:repo|org|user):\S/i;
+
 function isPersonal(token: ActiveToken): boolean {
   return token.owner !== null && token.login !== null && sameOwner(token.owner, token.login);
 }
@@ -16,7 +18,9 @@ export function scopeSearchQuery(
   token: ActiveToken,
   tokens: readonly ActiveToken[],
 ): string {
-  if (token.owner === null || token.login === null) {
+  // A query that already names its repositories or owners needs no scope, and GitHub caps the
+  // query length, so long repository lists must not grow further.
+  if (token.owner === null || token.login === null || EXPLICIT_SCOPE.test(query)) {
     return query;
   }
   if (!isPersonal(token)) {
