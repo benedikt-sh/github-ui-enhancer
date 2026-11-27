@@ -1,0 +1,156 @@
+/* Actions runs widget. Builds on the UI kit styles in src/ui/styles.css. */
+
+.ghx-actions-runs__status:empty {
+  display: none;
+}
+
+.ghx-actions-runs__status {
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px) 0;
+}
+
+.ghx-actions-runs__header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  border-bottom: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-actions-runs__header .ghx-row__repo {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fgColor-default, #1f2328);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-actions-runs__branch-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  margin-left: auto;
+}
+
+.ghx-actions-runs__branch {
+  max-width: 200px;
+}
+
+.ghx-actions-runs__content > .ghx-notice {
+  margin: var(--base-size-8, 8px) var(--base-size-16, 16px);
+}
+
+.ghx-actions-runs__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-actions-runs__stale {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  margin-right: auto;
+  color: var(--fgColor-attention, #9a6700);
+}
+
+.ghx-actions-runs__choose {
+  padding: var(--base-size-16, 16px);
+}
+
+.ghx-actions-runs__intro {
+  margin: 0 0 var(--base-size-8, 8px);
+  color: var(--fgColor-muted, #59636e);
+}
+
+/* Repo picker */
+
+.ghx-actions-runs-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8, 8px);
+}
+
+.ghx-actions-runs-picker__notices:empty {
+  display: none;
+}
+
+.ghx-actions-runs-picker__list {
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  list-style: none;
+}
+
+.ghx-actions-runs-picker__list > li + li {
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+}
+
+.ghx-actions-runs-picker__option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--base-size-8, 8px);
+  align-items: center;
+  width: 100%;
+  padding: var(--base-size-8, 8px) var(--base-size-12, 12px);
+  border: 0;
+  background: transparent;
+  color: var(--fgColor-default, #1f2328);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ghx-actions-runs-picker__option:hover,
+.ghx-actions-runs-picker__option:focus-visible {
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.ghx-actions-runs-picker__option:focus-visible {
+  outline: 2px solid var(--focus-outlineColor, #0969da);
+  outline-offset: -2px;
+}
+
+.ghx-actions-runs-picker__option[aria-pressed='true'] {
+  background-color: var(--bgColor-accent-muted, #ddf4ff);
+}
+
+.ghx-actions-runs-picker__option .ghx-icon {
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-actions-runs-picker__name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-actions-runs-picker__description {
+  grid-column: 2;
+  overflow: hidden;
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Config form */
+
+.ghx-actions-runs-form__selection {
+  margin-bottom: var(--base-size-4, 4px);
+}
+
+.ghx-actions-runs-form__actions {
+  display: flex;
+  gap: var(--base-size-8, 8px);
+}
