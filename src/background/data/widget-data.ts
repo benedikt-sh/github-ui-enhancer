@@ -25,6 +25,7 @@ import {
 import { byNewest, clampLimit, mergeParts, type Part } from './merge.ts';
 import type { SearchKind } from './queries.ts';
 import { createSearchBatcher } from './search-batcher.ts';
+import { scopeSearchQuery } from './search-scope.ts';
 import {
   type CachedList,
   isBranchItem,
@@ -281,17 +282,20 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
     const limit = clampLimit(listOptions?.limit);
     const qualifier = kind === 'pullRequest' ? 'is:pr' : 'is:issue';
     const fullQuery = `${qualifier} ${query.trim()}`.trim();
-    const parts = await fanOut<T>(tokens, (token) => ({
-      key: cacheKey('search', kind, token.id, limit, fullQuery),
-      bucket: 'graphql',
-      ttl: SEARCH_TTL_MS,
-      validate: isCachedListOf(guard),
-      options: listOptions,
-      load: async () => {
-        const outcome = await batcher.search(token, { kind, query: fullQuery, first: limit });
-        return loaded(mapAll(outcome.nodes, map), outcome.errors);
-      },
-    }));
+    const parts = await fanOut<T>(tokens, (token) => {
+      const tokenQuery = scopeSearchQuery(fullQuery, token, tokens);
+      return {
+        key: cacheKey('search', kind, token.id, limit, tokenQuery),
+        bucket: 'graphql',
+        ttl: SEARCH_TTL_MS,
+        validate: isCachedListOf(guard),
+        options: listOptions,
+        load: async () => {
+          const outcome = await batcher.search(token, { kind, query: tokenQuery, first: limit });
+          return loaded(mapAll(outcome.nodes, map), outcome.errors);
+        },
+      };
+    });
     return mergeParts(parts, {
       identify: (item) => item.id,
       compare: byNewest((item) => item.updatedAt),

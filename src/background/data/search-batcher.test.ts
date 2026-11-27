@@ -153,6 +153,32 @@ describe('createSearchBatcher', () => {
     );
   });
 
+  it('drops nodes the token may not read without reporting them', async () => {
+    const { fake, batcher, flush } = setup();
+    fake.on(GRAPHQL, {
+      body: {
+        data: { s0: { nodes: [null, null, graphQLIssue()] } },
+        errors: [
+          {
+            type: 'FORBIDDEN',
+            path: ['s0', 'nodes', 0],
+            message: 'Resource not accessible by personal access token',
+          },
+          {
+            type: 'FORBIDDEN',
+            path: ['s0', 'nodes', 1],
+            message: 'Resource not accessible by personal access token',
+          },
+        ],
+      },
+    });
+
+    const outcome = batcher.search(ALICE, ISSUES);
+    flush();
+
+    assert.deepEqual(await outcome, { nodes: [null, null, graphQLIssue()], errors: [] });
+  });
+
   it('falls back to unrelated errors or invalid_response for missing fields', async () => {
     const { fake, batcher, flush } = setup();
     fake.once(GRAPHQL, {

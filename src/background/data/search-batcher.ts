@@ -1,6 +1,6 @@
 import { ApiError, type ApiErrorInfo } from '../../shared/errors.ts';
 import { isRecord } from '../../shared/guards.ts';
-import type { GitHubClient, GraphQLResult } from '../github/types.ts';
+import type { GitHubClient, GraphQLFieldError, GraphQLResult } from '../github/types.ts';
 import { buildSearchDocument, searchAlias, type SearchRequest } from './queries.ts';
 
 /** Searches arriving within this many milliseconds share one GraphQL request per token. */
@@ -53,6 +53,14 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
   return chunks;
 }
 
+/**
+ * A match the token may not read comes back as a null node with a FORBIDDEN error below the
+ * alias. It belongs to another owner, whose token (if any) delivers it, so it is not an error.
+ */
+function isForeignNode(error: GraphQLFieldError): boolean {
+  return error.path.length > 1 && error.error.kind === 'forbidden';
+}
+
 function settle(entries: readonly Pending[], result: GraphQLResult): void {
   const unrelated = result.errors.filter((error) => error.path.length === 0);
   entries.forEach((entry, index) => {
@@ -71,7 +79,7 @@ function settle(entries: readonly Pending[], result: GraphQLResult): void {
     const nodes = field['nodes'];
     entry.resolve({
       nodes: Array.isArray(nodes) ? nodes : [],
-      errors: own.map((error) => error.error),
+      errors: own.filter((error) => !isForeignNode(error)).map((error) => error.error),
     });
   });
 }

@@ -372,10 +372,17 @@ describe('searchPullRequests and searchIssues', () => {
     ]);
 
     assert.equal(fake.requests.length, 2);
+    // The personal token skips orgs with their own token, the org token stays in its org.
     assert.deepEqual(variables(fake.requests[0]!), {
-      q0: 'is:pr author:@me',
+      q0: 'is:pr author:@me -org:acme',
       n0: 2,
-      q1: 'is:issue assignee:@me',
+      q1: 'is:issue assignee:@me -org:acme',
+      n1: 20,
+    });
+    assert.deepEqual(variables(fake.requests[1]!), {
+      q0: 'is:pr author:@me org:acme',
+      n0: 2,
+      q1: 'is:issue assignee:@me org:acme',
       n1: 20,
     });
     assert.deepEqual(
