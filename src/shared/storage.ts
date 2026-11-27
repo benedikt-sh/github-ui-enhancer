@@ -18,6 +18,7 @@ export interface KeyValueStore {
 export const STORAGE_KEYS = {
   tokens: 'tokens',
   layout: 'layout',
+  singletons: 'singletons',
   cachePrefix: 'cache:',
 } as const;
 

@@ -33,11 +33,8 @@ import type { WidgetSlot } from './widget-slot.ts';
 
 export type HostView = 'dashboard' | 'original';
 
-/**
- * Singleton configs live next to the layout because singletons are not part of it. The key is
- * local to the host until it is added to `STORAGE_KEYS`.
- */
-export const SINGLETON_CONFIG_KEY = 'singletons';
+/** Singleton configs live next to the layout because singletons are not part of it. */
+export const SINGLETON_CONFIG_KEY = STORAGE_KEYS.singletons;
 
 export interface DashboardHostOptions {
   /** Element provided by the mount controller, the host appends its own container to it. */
