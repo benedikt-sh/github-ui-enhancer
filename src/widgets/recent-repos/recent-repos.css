@@ -1,0 +1,84 @@
+/* Recent repositories widget. Builds on the UI kit in src/ui/styles.css. */
+
+.ghx-recent-repos[aria-busy='true'] .ghx-list {
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in;
+}
+
+.ghx-recent-repos__owner {
+  color: var(--fgColor-muted, #59636e);
+  font-weight: 400;
+}
+
+.ghx-recent-repos__count {
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-recent-repos__quick-links {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+}
+
+.ghx-row a.ghx-recent-repos__quick-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--borderRadius-medium, 6px);
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-row a.ghx-recent-repos__quick-link:hover {
+  background-color: var(--bgColor-neutral-muted, #818b981f);
+  color: var(--fgColor-accent, #0969da);
+  text-decoration: none;
+}
+
+.ghx-recent-repos__errors {
+  border-bottom: 1px solid var(--borderColor-danger-muted, #ff818266);
+  background-color: var(--bgColor-danger-muted, #ffebe9);
+}
+
+/* The UI kit error state is centered and roomy, above a list it should be a compact banner. */
+.ghx-recent-repos__errors .ghx-state {
+  align-items: flex-start;
+  gap: var(--base-size-4, 4px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  text-align: left;
+}
+
+.ghx-recent-repos__errors .ghx-state__icon {
+  display: none;
+}
+
+.ghx-recent-repos__errors .ghx-state__actions {
+  justify-content: flex-start;
+}
+
+.ghx-recent-repos__footer {
+  display: flex;
+  align-items: center;
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-recent-repos__stale {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  color: var(--fgColor-attention, #9a6700);
+}
+
+.ghx-recent-repos-form {
+  padding: var(--base-size-16, 16px);
+}
+
+.ghx-recent-repos-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--base-size-8, 8px);
+  margin-top: var(--base-size-16, 16px);
+}
