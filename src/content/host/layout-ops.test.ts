@@ -5,6 +5,8 @@ import type { DashboardLayout, WidgetInstance } from '../../shared/layout.ts';
 import {
   addInstance,
   moveInstance,
+  placeBeside,
+  placeInstance,
   removeInstance,
   setInstanceConfig,
   toggleWidth,
@@ -40,6 +42,29 @@ describe('layout operations', () => {
     assert.equal(moveInstance(layout, 'a', -1), layout);
     assert.equal(moveInstance(layout, 'c', 1), layout);
     assert.equal(moveInstance(layout, 'missing', 1), layout);
+  });
+
+  it('places an instance before or after another one', () => {
+    assert.deepEqual(ids(placeInstance(layout, 'c', 'a', 'before')), ['c', 'a', 'b']);
+    assert.deepEqual(ids(placeInstance(layout, 'c', 'a', 'after')), ['a', 'c', 'b']);
+    assert.deepEqual(ids(placeInstance(layout, 'a', 'c', 'after')), ['b', 'c', 'a']);
+    assert.deepEqual(ids(placeInstance(layout, 'a', 'c', 'before')), ['b', 'a', 'c']);
+    assert.deepEqual(ids(placeInstance(layout, 'a', 'b', 'after')), ['b', 'a', 'c']);
+  });
+
+  it('returns the same layout when placing changes nothing', () => {
+    assert.equal(placeInstance(layout, 'a', 'b', 'before'), layout);
+    assert.equal(placeInstance(layout, 'b', 'a', 'after'), layout);
+    assert.equal(placeInstance(layout, 'b', 'b', 'before'), layout);
+    assert.equal(placeInstance(layout, 'missing', 'a', 'before'), layout);
+    assert.equal(placeInstance(layout, 'a', 'missing', 'after'), layout);
+  });
+
+  it('places plain entries with a custom id accessor', () => {
+    const list = ['x', 'y', 'z'];
+    assert.deepEqual(placeBeside(list, (entry) => entry, 'z', 'y', 'before'), ['x', 'z', 'y']);
+    assert.equal(placeBeside(list, (entry) => entry, 'y', 'z', 'before'), null);
+    assert.deepEqual(list, ['x', 'y', 'z']);
   });
 
   it('toggles the width', () => {

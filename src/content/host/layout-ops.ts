@@ -23,6 +23,48 @@ export function moveInstance(layout: DashboardLayout, id: string, offset: number
   return { version: 1, instances };
 }
 
+export type DropSide = 'before' | 'after';
+
+/**
+ * Moves the entry `id` directly before or after `targetId`. Returns null when either id is
+ * missing or the order would not change, so callers can tell a no-op apart.
+ */
+export function placeBeside<T>(
+  list: readonly T[],
+  idOf: (entry: T) => string,
+  id: string,
+  targetId: string,
+  side: DropSide,
+): T[] | null {
+  const index = list.findIndex((entry) => idOf(entry) === id);
+  const entry = list[index];
+  if (entry === undefined || id === targetId) {
+    return null;
+  }
+  const rest = list.filter((_, position) => position !== index);
+  const targetIndex = rest.findIndex((other) => idOf(other) === targetId);
+  if (targetIndex < 0) {
+    return null;
+  }
+  const insertAt = side === 'before' ? targetIndex : targetIndex + 1;
+  if (insertAt === index) {
+    return null;
+  }
+  rest.splice(insertAt, 0, entry);
+  return rest;
+}
+
+/** Drag and drop counterpart of `moveInstance`, returns the same layout when nothing moves. */
+export function placeInstance(
+  layout: DashboardLayout,
+  id: string,
+  targetId: string,
+  side: DropSide,
+): DashboardLayout {
+  const instances = placeBeside(layout.instances, (entry) => entry.id, id, targetId, side);
+  return instances === null ? layout : { version: 1, instances };
+}
+
 function updateInstance(
   layout: DashboardLayout,
   id: string,
