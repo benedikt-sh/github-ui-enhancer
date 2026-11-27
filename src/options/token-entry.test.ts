@@ -229,7 +229,7 @@ describe('tokenEntry set owner', () => {
 
     const input = ownerInput(view);
     assert.equal(input.value, '');
-    assert.equal(input.placeholder, 'octo-org');
+    assert.equal(input.placeholder, 'Detect automatically');
     assert.equal(document.activeElement, input);
     assert.match(text(view, '.ghx-hint') ?? '', /Leave empty to detect it/);
     assert.equal(view.element.querySelector('.ghx-token__actions'), null);
@@ -241,15 +241,6 @@ describe('tokenEntry set owner', () => {
     action(view, 'owner').click();
 
     assert.equal(ownerInput(view).value, 'my-org');
-  });
-
-  it('uses a generic placeholder without owner', () => {
-    const { view } = mount(tokenInfo({ owner: null, ownerSource: null }));
-
-    action(view, 'owner').click();
-
-    assert.equal(ownerInput(view).placeholder, 'octo-org');
-    assert.equal(ownerInput(view).value, '');
   });
 
   it('saves a trimmed owner and returns to the view', async () => {

@@ -1,0 +1,260 @@
+/* Layout of the options page and its token management. */
+
+.ghx-options {
+  box-sizing: border-box;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+
+.ghx-options *,
+.ghx-options *::before,
+.ghx-options *::after {
+  box-sizing: inherit;
+}
+
+.ghx-options__header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--borderColor-default, #d1d9e0);
+}
+
+.ghx-options__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.ghx-options__subtitle {
+  margin: 4px 0 0;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-options__section + .ghx-options__section {
+  margin-top: 40px;
+}
+
+.ghx-options__heading {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.ghx-options__subheading {
+  margin: 24px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ghx-options code {
+  padding: 0.1em 0.4em;
+  border-radius: 6px;
+  background-color: var(--bgColor-neutral-muted, #818b981f);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 85%;
+}
+
+.ghx-options__error-detail {
+  overflow-wrap: anywhere;
+}
+
+/* Guidance */
+
+.ghx-guidance p {
+  margin: 0 0 8px;
+}
+
+.ghx-guidance__steps,
+.ghx-guidance__notes {
+  margin: 0 0 12px;
+  padding-left: 24px;
+}
+
+.ghx-guidance__steps > li,
+.ghx-guidance__notes > li {
+  margin: 4px 0;
+}
+
+.ghx-guidance__notes {
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-guidance__permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ghx-guidance__permissions > li {
+  padding: 0 8px;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 2em;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* Token list */
+
+.ghx-token-list__items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 6px;
+}
+
+.ghx-token {
+  padding: 12px 16px;
+}
+
+.ghx-token + .ghx-token {
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+}
+
+.ghx-token[aria-busy='true'] {
+  cursor: progress;
+}
+
+.ghx-token__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ghx-token__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ghx-token__owner {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ghx-token__owner--unknown {
+  color: var(--fgColor-attention, #9a6700);
+}
+
+.ghx-token__owner-source {
+  color: var(--fgColor-muted, #59636e);
+  font-size: 12px;
+}
+
+.ghx-token__actions,
+.ghx-token__form-actions,
+.ghx-add-token__actions,
+.ghx-maintenance__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ghx-token__explanation {
+  margin: 4px 0 0;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-token__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--fgColor-muted, #59636e);
+  font-size: 12px;
+}
+
+.ghx-token__meta .ghx-tone--attention,
+.ghx-token__meta .ghx-tone--danger {
+  font-weight: 600;
+}
+
+.ghx-token__owner-form,
+.ghx-token__confirm {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 6px;
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.ghx-token__confirm {
+  border-color: var(--borderColor-danger-muted, #ff818266);
+}
+
+.ghx-token__confirm-text {
+  margin: 0 0 8px;
+}
+
+.ghx-token .ghx-notice {
+  margin-top: 12px;
+}
+
+/* Status badge, colors follow Primer's Label component. */
+
+.ghx-token-badge {
+  display: inline-block;
+  padding: 0 7px;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: 2em;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ghx-token-badge--neutral {
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-token-badge--success {
+  border-color: var(--borderColor-success-muted, #4ac26b66);
+  color: var(--fgColor-success, #1a7f37);
+}
+
+.ghx-token-badge--attention {
+  border-color: var(--borderColor-attention-muted, #d4a72c66);
+  color: var(--fgColor-attention, #9a6700);
+}
+
+.ghx-token-badge--danger {
+  border-color: var(--borderColor-danger-muted, #ff818266);
+  color: var(--fgColor-danger, #d1242f);
+}
+
+/* Add form and maintenance */
+
+.ghx-add-token {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 480px;
+}
+
+.ghx-add-token .ghx-field {
+  margin-bottom: 0;
+}
+
+.ghx-maintenance p {
+  margin: 0 0 12px;
+}
+
+.ghx-add-token__status:empty,
+.ghx-maintenance__status:empty {
+  display: none;
+}
+
+.ghx-maintenance__status {
+  margin-top: 12px;
+}

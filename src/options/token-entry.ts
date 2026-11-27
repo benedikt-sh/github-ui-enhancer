@@ -202,7 +202,7 @@ export function tokenEntry(initial: TokenInfo, deps: TokenEntryDeps): TokenEntry
   const ownerForm = (): HTMLFormElement => {
     const input = textInput({
       value: ownerDraft,
-      placeholder: info.owner ?? 'octo-org',
+      placeholder: 'Detect automatically',
       autocomplete: 'off',
       disabled: busy !== null,
       onInput: (value) => {
