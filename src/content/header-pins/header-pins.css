@@ -1,0 +1,227 @@
+/*
+ * Pinned repositories in GitHub's global header bar. The element is a flex child of the bar,
+ * so it may shrink: the links clip, the manage button stays.
+ */
+
+.ghx-header-pins {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  min-width: 0;
+  margin-right: var(--base-size-8, 8px);
+  color: var(--fgColor-default, #1f2328);
+}
+
+/* Below GitHub's `lg` breakpoint the search collapses and the bar has no room left. */
+@media (max-width: 1011.98px) {
+  .ghx-header-pins {
+    display: none !important;
+  }
+}
+
+.ghx-header-pins [hidden] {
+  display: none !important;
+}
+
+.ghx-header-pins__nav {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ghx-header-pins__list {
+  display: flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ghx-header-pins__item {
+  flex: 0 0 auto;
+}
+
+.ghx-header-pins__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  max-width: 160px;
+  height: 32px;
+  padding: 0 var(--base-size-8, 8px);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  color: var(--fgColor-default, #1f2328);
+  font-size: var(--text-body-size-medium, 14px);
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.ghx-header-pins__link:hover {
+  background-color: var(--control-transparent-bgColor-hover, #818b981a);
+  color: var(--fgColor-default, #1f2328);
+  text-decoration: none;
+}
+
+.ghx-header-pins__link:focus-visible {
+  outline: 2px solid var(--focus-outlineColor, #0969da);
+  outline-offset: -2px;
+}
+
+.ghx-header-pins__link .ghx-icon {
+  flex: 0 0 auto;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-header-pins__link--recent {
+  border-style: dashed;
+}
+
+.ghx-header-pins__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-header-pins__manage {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* Panel */
+
+.ghx-header-pins__panel {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + var(--base-size-4, 4px));
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8, 8px);
+  width: 320px;
+  padding: var(--base-size-12, 12px);
+  border-radius: var(--borderRadius-large, 12px);
+  background-color: var(--overlay-bgColor, #ffffff);
+  box-shadow: var(
+    --shadow-floating-small,
+    0 0 0 1px #d1d9e080,
+    0 6px 12px -3px #25292e0a,
+    0 6px 18px 0 #25292e1f
+  );
+  color: var(--fgColor-default, #1f2328);
+  font-size: var(--text-body-size-medium, 14px);
+  line-height: 20px;
+  text-align: left;
+}
+
+.ghx-header-pins__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--base-size-8, 8px);
+}
+
+.ghx-header-pins__title {
+  margin: 0;
+  font-size: var(--text-body-size-medium, 14px);
+  font-weight: 600;
+}
+
+.ghx-header-pins__count,
+.ghx-header-pins__empty {
+  margin: 0;
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-header-pins__entries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ghx-header-pins__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+  min-height: 32px;
+}
+
+.ghx-header-pins__entry > .ghx-icon {
+  flex: 0 0 auto;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-header-pins__entry-link {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fgColor-default, #1f2328);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-header-pins__add {
+  align-self: flex-start;
+}
+
+.ghx-header-pins__error {
+  margin: 0;
+  color: var(--fgColor-danger, #d1242f);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-header-pins__options {
+  padding-top: var(--base-size-8, 8px);
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+}
+
+/* Repo picker */
+
+.ghx-pin-picker__input {
+  width: 100%;
+}
+
+.ghx-pin-picker__list {
+  margin: var(--base-size-4, 4px) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ghx-pin-picker__option {
+  display: flex;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-4, 4px) var(--base-size-8, 8px);
+  border-radius: var(--borderRadius-medium, 6px);
+  cursor: pointer;
+}
+
+.ghx-pin-picker__option .ghx-icon {
+  flex: 0 0 auto;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-pin-picker__option:hover,
+.ghx-pin-picker__option[aria-selected='true'] {
+  background-color: var(--control-transparent-bgColor-hover, #818b981a);
+}
+
+.ghx-pin-picker__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-pin-picker__match {
+  background: none;
+  color: inherit;
+  font-weight: 600;
+}
+
+.ghx-pin-picker__status {
+  margin: var(--base-size-4, 4px) 0 0;
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+}
