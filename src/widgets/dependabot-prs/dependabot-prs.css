@@ -1,0 +1,230 @@
+/* Dependabot pull requests widget. Builds on the UI kit in src/ui/styles.css. */
+
+.ghx-dependabot-prs[aria-busy='true'] .ghx-list {
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in;
+}
+
+.ghx-dependabot-prs__status:empty {
+  display: none;
+}
+
+.ghx-dependabot-prs__status {
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px) 0;
+}
+
+.ghx-dependabot-prs__errors {
+  border-bottom: 1px solid var(--borderColor-danger-muted, #ff818266);
+  background-color: var(--bgColor-danger-muted, #ffebe9);
+}
+
+/* The UI kit error state is centered and roomy, above a list it should be a compact banner. */
+.ghx-dependabot-prs__errors .ghx-state {
+  align-items: flex-start;
+  gap: var(--base-size-4, 4px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  text-align: left;
+}
+
+.ghx-dependabot-prs__errors .ghx-state__icon {
+  display: none;
+}
+
+.ghx-dependabot-prs__errors .ghx-state__actions {
+  justify-content: flex-start;
+}
+
+.ghx-dependabot-prs__group + .ghx-dependabot-prs__group {
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+}
+
+.ghx-dependabot-prs__group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--base-size-8, 8px);
+  margin: 0;
+  padding: var(--base-size-4, 4px) var(--base-size-16, 16px);
+  border-bottom: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  background-color: var(--bgColor-muted, #f6f8fa);
+  font-size: var(--text-body-size-small, 12px);
+  font-weight: 600;
+}
+
+.ghx-dependabot-prs__group-header .ghx-row__repo {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fgColor-default, #1f2328);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-dependabot-prs__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-dependabot-prs__stale {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  margin-right: auto;
+  color: var(--fgColor-attention, #9a6700);
+}
+
+.ghx-dependabot-prs__setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-16, 16px);
+}
+
+.ghx-dependabot-prs__intro {
+  margin: 0;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-dependabot-prs__setup-actions,
+.ghx-dependabot-prs-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--base-size-8, 8px);
+}
+
+.ghx-dependabot-prs-form {
+  padding: var(--base-size-16, 16px);
+}
+
+.ghx-dependabot-prs-form__actions {
+  margin-top: var(--base-size-16, 16px);
+}
+
+/* Repo picker */
+
+.ghx-dependabot-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8, 8px);
+}
+
+.ghx-dependabot-picker__notices:empty {
+  display: none;
+}
+
+.ghx-dependabot-picker__selection .ghx-hint {
+  margin: 0;
+}
+
+.ghx-dependabot-picker__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--base-size-4, 4px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ghx-dependabot-picker__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  max-width: 100%;
+  padding: 0 0 0 var(--base-size-8, 8px);
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-full, 9999px);
+  background-color: var(--bgColor-muted, #f6f8fa);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-dependabot-picker__chip > .ghx-icon {
+  flex: none;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-dependabot-picker__chip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-dependabot-picker__chip .ghx-btn--icon {
+  border-radius: var(--borderRadius-full, 9999px);
+}
+
+.ghx-dependabot-picker__list {
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--borderColor-default, #d1d9e0);
+  border-radius: var(--borderRadius-medium, 6px);
+  list-style: none;
+}
+
+.ghx-dependabot-picker__list > li + li {
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+}
+
+.ghx-dependabot-picker__option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--base-size-8, 8px);
+  align-items: center;
+  width: 100%;
+  padding: var(--base-size-8, 8px) var(--base-size-12, 12px);
+  border: 0;
+  background: transparent;
+  color: var(--fgColor-default, #1f2328);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ghx-dependabot-picker__option:hover:not(:disabled),
+.ghx-dependabot-picker__option:focus-visible {
+  background-color: var(--bgColor-muted, #f6f8fa);
+}
+
+.ghx-dependabot-picker__option:focus-visible {
+  outline: 2px solid var(--focus-outlineColor, #0969da);
+  outline-offset: -2px;
+}
+
+.ghx-dependabot-picker__option:disabled {
+  color: var(--fgColor-disabled, #818b98);
+  cursor: not-allowed;
+}
+
+.ghx-dependabot-picker__option[aria-pressed='true'] {
+  background-color: var(--bgColor-accent-muted, #ddf4ff);
+}
+
+.ghx-dependabot-picker__option .ghx-icon {
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-dependabot-picker__option[aria-pressed='true'] .ghx-icon {
+  color: var(--fgColor-accent, #0969da);
+}
+
+.ghx-dependabot-picker__name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghx-dependabot-picker__description {
+  grid-column: 2;
+  overflow: hidden;
+  color: var(--fgColor-muted, #59636e);
+  font-size: var(--text-body-size-small, 12px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
