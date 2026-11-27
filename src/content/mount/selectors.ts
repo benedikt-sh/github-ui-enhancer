@@ -65,3 +65,50 @@ function firstOutside(document: Document, selector: string, exclude: Element | n
   }
   return null;
 }
+
+/** Known hooks of GitHub's changelog widget, tried before the link heuristic below. */
+export const CHANGELOG_SELECTORS = [
+  '.dashboard-changelog',
+  '[data-testid*="changelog" i]',
+  '[aria-label*="changelog" i]',
+] as const;
+
+const CHANGELOG_LINK = 'a[href^="https://github.blog/changelog"]';
+const BLOG_ORIGIN = 'https://github.blog/';
+const STOP_AT = 'main, body, html';
+
+/**
+ * GitHub's widget markup changes often, its links to the GitHub blog do not. The widget is the
+ * largest ancestor of such a link that contains nothing but blog links.
+ */
+export function findChangelogWidgets(document: Document, exclude: Element | null): Element[] {
+  const found: Element[] = [];
+  const add = (element: Element): void => {
+    const inside = exclude?.contains(element) === true;
+    if (!inside && !found.some((known) => known.contains(element))) {
+      found.push(element);
+    }
+  };
+  for (const selector of CHANGELOG_SELECTORS) {
+    document.querySelectorAll(selector).forEach(add);
+  }
+  document.querySelectorAll(CHANGELOG_LINK).forEach((link) => add(changelogCard(link)));
+  return found;
+}
+
+function changelogCard(link: Element): Element {
+  let card = link;
+  for (let parent = link.parentElement; parent !== null; parent = parent.parentElement) {
+    if (parent.matches(STOP_AT) || !onlyBlogLinks(parent)) {
+      break;
+    }
+    card = parent;
+  }
+  return card;
+}
+
+function onlyBlogLinks(element: Element): boolean {
+  return [...element.querySelectorAll('a[href]')].every((link) =>
+    (link.getAttribute('href') ?? '').startsWith(BLOG_ORIGIN),
+  );
+}

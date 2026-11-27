@@ -4,7 +4,13 @@ import { after, before, describe, it } from 'node:test';
 import { installDom } from '../../../test/dom.ts';
 import type { DomEnvironment } from '../../../test/dom.ts';
 import { renderPage } from './github-page.fixture.ts';
-import { findMountPoint, isLoggedIn, isStartPath, pageLogin } from './selectors.ts';
+import {
+  findChangelogWidgets,
+  findMountPoint,
+  isLoggedIn,
+  isStartPath,
+  pageLogin,
+} from './selectors.ts';
 
 describe('selectors', () => {
   let dom: DomEnvironment;
@@ -111,5 +117,64 @@ describe('selectors', () => {
 
     assert.equal(findMountPoint(document, own)?.container, document.querySelector('[role=main]'));
     assert.equal(findMountPoint(document, null)?.container, own.firstElementChild);
+  });
+});
+
+describe('findChangelogWidgets', () => {
+  let dom: DomEnvironment;
+  before(() => {
+    dom = installDom();
+  });
+  after(() => dom.cleanup());
+
+  function render(html: string): void {
+    document.body.innerHTML = html;
+  }
+
+  it('finds known changelog hooks', () => {
+    render('<aside><div class="dashboard-changelog" id="a"></div></aside>');
+
+    assert.deepEqual(
+      findChangelogWidgets(document, null).map((element) => element.id),
+      ['a'],
+    );
+  });
+
+  it('takes the largest ancestor of changelog links that holds only blog links', () => {
+    render(`
+      <div class="sidebar" id="sidebar">
+        <a href="https://github.com/octo/repo">Repo</a>
+        <section id="card">
+          <h2>Latest changes</h2>
+          <ul>
+            <li><a href="https://github.blog/changelog/2026-11-20-a">A</a></li>
+            <li><a href="https://github.blog/changelog/2026-11-21-b">B</a></li>
+          </ul>
+          <a href="https://github.blog/changelog/">View changelog</a>
+        </section>
+      </div>`);
+
+    assert.deepEqual(
+      findChangelogWidgets(document, null).map((element) => element.id),
+      ['card'],
+    );
+  });
+
+  it('stops at main and ignores matches inside the excluded root', () => {
+    render(`
+      <main id="main"><a id="link" href="https://github.blog/changelog/x">X</a></main>
+      <div id="ghx-root"><div class="dashboard-changelog"></div></div>`);
+
+    const root = document.getElementById('ghx-root');
+    assert.deepEqual(
+      findChangelogWidgets(document, root).map((element) => element.id),
+      ['link'],
+    );
+  });
+
+  it('returns nothing without changelog markup', () => {
+    render('<main><a href="https://github.com/">Home</a><a>no href</a></main>');
+
+    assert.deepEqual(findChangelogWidgets(document, null), []);
   });
 });

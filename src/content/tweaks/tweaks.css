@@ -1,0 +1,4 @@
+/* Elements hidden by tweaks. !important because GitHub's utilities set display with it. */
+[data-ghx-hidden='changelog'] {
+  display: none !important;
+}
