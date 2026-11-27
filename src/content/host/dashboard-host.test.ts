@@ -13,6 +13,7 @@ import type { TokenInfo } from '../../shared/tokens.ts';
 import { h } from '../../ui/dom.ts';
 import { createDashboardHost, SINGLETON_CONFIG_KEY } from './dashboard-host.ts';
 import type { DashboardHost, DashboardHostOptions, HostView } from './dashboard-host.ts';
+import { DRAGGING_CLASS, DROP_AFTER_CLASS } from './drag-reorder.ts';
 import { createFakeTime, createFakeVisibility, createFakeWidget } from './host.fixture.ts';
 import type { FakeTime, FakeVisibility, FakeWidget } from './host.fixture.ts';
 
@@ -707,5 +708,135 @@ describe('createDashboardHost defaults', () => {
         }),
       /must belong to a document with a window/,
     );
+  });
+});
+
+describe('createDashboardHost drag and drop', () => {
+  function setBox(element: Element, left: number, top: number, width: number): void {
+    Object.defineProperty(element, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ left, top, right: left + width, bottom: top + 100, width, height: 100 }),
+    });
+  }
+
+  function pointer(target: EventTarget, type: string, x: number, y: number): void {
+    const buttons = type === 'pointerup' ? 0 : 1;
+    const init = { bubbles: true, clientX: x, clientY: y, pointerId: 1, isPrimary: true, buttons };
+    target.dispatchEvent(new dom.window.PointerEvent(type, init) as unknown as Event);
+  }
+
+  /** a | b on the first row, c on the second, all half width in a 1000px grid. */
+  async function dragSetup(options: SetupOptions = {}): Promise<Setup> {
+    const result = await setup({
+      stored: { 'ghx:layout': layoutOf(instance('a'), instance('b'), instance('c')) },
+      ...options,
+    });
+    const grid = result.root.querySelector('.ghx-host-grid');
+    assert.ok(grid);
+    setBox(grid, 0, 300, 1000);
+    setBox(itemElement(result.root, 'a'), 0, 300, 490);
+    setBox(itemElement(result.root, 'b'), 510, 300, 490);
+    setBox(itemElement(result.root, 'c'), 0, 420, 490);
+    return result;
+  }
+
+  function header(root: HTMLElement, id: string): HTMLElement {
+    const element = itemElement(root, id).querySelector<HTMLElement>('.ghx-host-item__handle');
+    assert.ok(element);
+    return element;
+  }
+
+  function drag(root: HTMLElement, id: string, x: number, y: number, release = true): void {
+    const handle = header(root, id);
+    pointer(handle, 'pointerdown', 20, 320);
+    pointer(handle, 'pointermove', x, y);
+    if (release) {
+      pointer(handle, 'pointerup', x, y);
+    }
+  }
+
+  const status = (root: HTMLElement): string =>
+    root.querySelector('.ghx-host-status')?.textContent ?? '';
+
+  it('reorders by dragging the header without remounting and saves the layout', async () => {
+    const { root, area, widgets } = await dragSetup();
+    drag(root, 'c', 300, 350, false);
+    assert.ok(itemElement(root, 'c').classList.contains(DRAGGING_CLASS));
+    assert.ok(itemElement(root, 'a').classList.contains(DROP_AFTER_CLASS));
+    pointer(header(root, 'c'), 'pointerup', 20, 350);
+    await flush();
+    assert.deepEqual(itemIds(root), ['c', 'a', 'b']);
+    assert.equal(widgets.list.mounts.length, 3);
+    assert.deepEqual(
+      (storedLayout(area) as DashboardLayout).instances.map((entry) => entry.id),
+      ['c', 'a', 'b'],
+    );
+    assert.equal(status(root), 'Moved "Fake list: c" to position 1 of 3.');
+    assert.equal(findButton(itemElement(root, 'c'), 'Move up').disabled, true);
+  });
+
+  it('saves nothing when dropped on the original position', async () => {
+    const { root, area } = await dragSetup();
+    const before = area.snapshot();
+    drag(root, 'b', 300, 350);
+    await flush();
+    assert.deepEqual(itemIds(root), ['a', 'b', 'c']);
+    assert.deepEqual(area.snapshot(), before);
+    assert.equal(status(root), '');
+  });
+
+  it('announces moves from the instance menu', async () => {
+    const { root } = await dragSetup();
+    clickMenuItem(itemElement(root, 'a'), 'Move down');
+    assert.equal(status(root), 'Moved "Fake list: a" to position 2 of 3.');
+  });
+
+  it('does not drag while the config form is open', async () => {
+    const { root, area, widgets } = await dragSetup();
+    const before = area.snapshot();
+    clickMenuItem(itemElement(root, 'a'), 'Configure');
+    drag(root, 'a', 900, 450);
+    await flush();
+    assert.deepEqual(itemIds(root), ['a', 'b', 'c']);
+    assert.deepEqual(area.snapshot(), before);
+    widgets.list.forms[0]?.context.cancel();
+    drag(root, 'a', 900, 450);
+    await flush();
+    assert.deepEqual(itemIds(root), ['b', 'c', 'a']);
+  });
+
+  it('cancels a drag when switching to the original page', async () => {
+    const { root, host, area } = await dragSetup();
+    const before = area.snapshot();
+    drag(root, 'a', 900, 450, false);
+    assert.ok(itemElement(root, 'a').classList.contains(DRAGGING_CLASS));
+    host.setView('original');
+    assert.equal(itemElement(root, 'a').classList.contains(DRAGGING_CLASS), false);
+    pointer(header(root, 'a'), 'pointerup', 900, 450);
+    drag(root, 'a', 900, 450);
+    await flush();
+    assert.deepEqual(area.snapshot(), before);
+  });
+
+  it('ends a running drag and its auto scroll on dispose', async () => {
+    const { root, host, time } = await dragSetup();
+    const scrolls: number[] = [];
+    const original = window.scrollBy;
+    const record = (_x: number, y: number): void => {
+      scrolls.push(y);
+    };
+    Object.defineProperty(window, 'scrollBy', { configurable: true, value: record });
+    try {
+      const item = itemElement(root, 'a');
+      drag(root, 'a', 500, window.innerHeight - 1, false);
+      assert.ok(item.classList.contains(DRAGGING_CLASS));
+      host.dispose();
+      assert.equal(item.classList.contains(DRAGGING_CLASS), false);
+      assert.equal(time.pending(), 0);
+      time.advance(MINUTE);
+      assert.deepEqual(scrolls, []);
+    } finally {
+      Object.defineProperty(window, 'scrollBy', { configurable: true, value: original });
+    }
   });
 });

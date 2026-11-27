@@ -126,3 +126,95 @@
 .ghx-host-config {
   padding: var(--base-size-16, 16px);
 }
+
+/* Drag and drop */
+
+.ghx-host-item {
+  position: relative;
+}
+
+.ghx-host-item__handle {
+  padding-left: var(--base-size-8, 8px);
+  cursor: grab;
+  /* Touch input would scroll the page instead of dragging the widget. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ghx-host-item__handle .ghx-widget__actions {
+  cursor: auto;
+}
+
+.ghx-host-item__grabber {
+  flex-shrink: 0;
+  color: var(--fgColor-muted, #59636e);
+}
+
+/* No dragging while the config form is open, see `HostItem.draggable`. */
+.ghx-host-item:has(> .ghx-widget__body > .ghx-host-config) > .ghx-host-item__handle {
+  cursor: auto;
+  touch-action: auto;
+}
+
+.ghx-host-item:has(> .ghx-widget__body > .ghx-host-config) .ghx-host-item__grabber {
+  visibility: hidden;
+}
+
+.ghx-host-grid--dragging,
+.ghx-host-grid--dragging * {
+  cursor: grabbing !important;
+}
+
+.ghx-host-item--dragging {
+  opacity: 0.5;
+  outline: 2px dashed var(--borderColor-accent-emphasis, #0969da);
+  outline-offset: 2px;
+}
+
+.ghx-host-item--drop-before::after,
+.ghx-host-item--drop-after::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--bgColor-accent-emphasis, #0969da);
+  content: '';
+  pointer-events: none;
+}
+
+/* Centered in the 16px grid gap. */
+.ghx-host-item--drop-before::after {
+  top: -10px;
+}
+
+.ghx-host-item--drop-after::after {
+  bottom: -10px;
+}
+
+.ghx-host-item--drop-inline::after {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  height: auto;
+}
+
+.ghx-host-item--drop-inline.ghx-host-item--drop-before::after {
+  right: auto;
+  left: -10px;
+}
+
+.ghx-host-item--drop-inline.ghx-host-item--drop-after::after {
+  right: -10px;
+  left: auto;
+}
+
+.ghx-host-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

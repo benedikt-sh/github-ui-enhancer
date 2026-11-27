@@ -11,11 +11,13 @@ import { button, notice } from '../../ui/forms.ts';
 import { dropdownMenu } from '../../ui/menu.ts';
 import type { MenuItem } from '../../ui/menu.ts';
 import { emptyState, loadingState } from '../../ui/states.ts';
+import { createDragReorder } from './drag-reorder.ts';
 import { createInstanceItem } from './instance-item.ts';
 import type { HostItem } from './instance-item.ts';
 import {
   addInstance,
   moveInstance,
+  placeInstance,
   removeInstance,
   setInstanceConfig,
   toggleWidth,
@@ -142,6 +144,7 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
   const saveArea = h('div', { className: 'ghx-host-save' });
   const singletonArea = h('div', { className: 'ghx-host-singletons' });
   const grid = h('div', { className: 'ghx-host-grid' }, loadingState('Loading dashboard...'));
+  const status = h('div', { className: 'ghx-host-status', role: 'status' });
   const emptyLayout = emptyState({
     icon: 'plus',
     title: 'Your dashboard is empty',
@@ -154,17 +157,26 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
     h('div', { className: 'ghx-host-notices' }, tokenArea, saveArea),
     singletonArea,
     grid,
+    status,
   );
   const container = h('div', { className: 'ghx-host' }, originalBar, dashboard);
   root.append(container);
 
+  const timers = options.timers ?? windowTimers(requireWindow(document));
   const scheduler = createRefreshScheduler({
     intervalMs: options.refreshIntervalMs ?? DEFAULT_REFRESH_INTERVAL_MS,
-    timers: options.timers ?? windowTimers(requireWindow(document)),
+    timers,
     visibility: options.visibility ?? documentVisibility(document),
     clock,
     isActive: () => view === 'dashboard',
     onRefresh: refreshEverything,
+  });
+  const dragReorder = createDragReorder({
+    grid,
+    timers,
+    canDrag: (id) => view === 'dashboard' && items.get(id)?.draggable === true,
+    onDrop: (id, targetId, side) =>
+      moveItem(id, (current) => placeInstance(current, id, targetId, side)),
   });
 
   applyView();
@@ -204,6 +216,7 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
       scheduler.resume();
     } else {
       addMenu.close();
+      dragReorder.cancel();
     }
   }
 
@@ -339,16 +352,36 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
   }
 
   function commit(update: (current: DashboardLayout) => DashboardLayout): Promise<void> {
+    const next = applyUpdate(update);
+    return next === null ? Promise.resolve() : persist(STORAGE_KEYS.layout, next);
+  }
+
+  /** Renders the updated layout and returns it, or null when nothing changed. */
+  function applyUpdate(
+    update: (current: DashboardLayout) => DashboardLayout,
+  ): DashboardLayout | null {
     if (layout === null || disposed) {
-      return Promise.resolve();
+      return null;
     }
     const next = update(layout);
     if (next === layout) {
-      return Promise.resolve();
+      return null;
     }
     layout = next;
     render();
-    return persist(STORAGE_KEYS.layout, next);
+    return next;
+  }
+
+  /** Announces completed moves, since screen readers do not notice reordered nodes. */
+  function moveItem(id: string, update: (current: DashboardLayout) => DashboardLayout): void {
+    const next = applyUpdate(update);
+    if (next === null) {
+      return;
+    }
+    void persist(STORAGE_KEYS.layout, next);
+    const position = next.instances.findIndex((entry) => entry.id === id) + 1;
+    const title = items.get(id)?.title ?? 'Widget';
+    status.textContent = `Moved "${title}" to position ${position} of ${next.instances.length}.`;
   }
 
   function addWidget(
@@ -382,7 +415,7 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
       startInConfig,
       persistConfig: (id, config) => commit((current) => setInstanceConfig(current, id, config)),
       onToggleWidth: (id) => void commit((current) => toggleWidth(current, id)),
-      onMove: (id, offset) => void commit((current) => moveInstance(current, id, offset)),
+      onMove: (id, offset) => moveItem(id, (current) => moveInstance(current, id, offset)),
       onRemove: (id) => void commit((current) => removeInstance(current, id)),
     });
   }
@@ -435,6 +468,7 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
       }
       disposed = true;
       scheduler.dispose();
+      dragReorder.dispose();
       addMenu.close();
       for (const slot of singletons) {
         slot.dispose();
