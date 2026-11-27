@@ -1,4 +1,5 @@
 import type { MessageListener, SendingRuntime } from './messages.ts';
+import { areaKey } from './storage.ts';
 import type { StorageAreaLike } from './storage.ts';
 
 type ExtensionApi = typeof chrome;
@@ -30,4 +31,25 @@ export function extensionOrigin(api: ExtensionApi): string {
 
 export function storageArea(api: ExtensionApi, area: 'local' | 'sync' | 'session'): StorageAreaLike {
   return api.storage[area];
+}
+
+/** Calls `listener` with the new value whenever `key` changes in `area`, also from other tabs. */
+export function watchStorageKey(
+  api: ExtensionApi,
+  area: 'local' | 'sync',
+  key: string,
+  listener: (value: unknown) => void,
+): () => void {
+  const fullKey = areaKey(key);
+  const onChanged = (
+    changes: Record<string, { newValue?: unknown }>,
+    areaName: string,
+  ): void => {
+    const change = changes[fullKey];
+    if (areaName === area && change !== undefined) {
+      listener(change.newValue);
+    }
+  };
+  api.storage.onChanged.addListener(onChanged);
+  return () => api.storage.onChanged.removeListener(onChanged);
 }

@@ -7,6 +7,7 @@ import {
   extensionOrigin,
   sendingRuntime,
   storageArea,
+  watchStorageKey,
 } from './extension-api.ts';
 
 function fakeApi(name: string) {
@@ -58,5 +59,37 @@ describe('adapters', () => {
     assert.deepEqual(listeners, [listener]);
     assert.equal(extensionOrigin(api), 'ext://id/');
     assert.deepEqual(storageArea(api, 'sync'), { area: 'sync' });
+  });
+});
+
+describe('watchStorageKey', () => {
+  it('reports new values of one key in one area until unsubscribed', () => {
+    type Listener = (changes: Record<string, { newValue?: unknown }>, area: string) => void;
+    const listeners = new Set<Listener>();
+    const api = {
+      storage: {
+        onChanged: {
+          addListener: (listener: Listener) => listeners.add(listener),
+          removeListener: (listener: Listener) => listeners.delete(listener),
+        },
+      },
+    } as unknown as typeof chrome;
+    const seen: unknown[] = [];
+    const emit = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+      for (const listener of listeners) {
+        listener(changes, area);
+      }
+    };
+
+    const stop = watchStorageKey(api, 'sync', 'tweaks', (value) => seen.push(value));
+    emit({ 'ghx:tweaks': { newValue: { a: 1 } } }, 'sync');
+    emit({ 'ghx:tweaks': { newValue: 'local' } }, 'local');
+    emit({ 'ghx:layout': { newValue: 'other' } }, 'sync');
+    emit({ 'ghx:tweaks': {} }, 'sync');
+    stop();
+    emit({ 'ghx:tweaks': { newValue: 'late' } }, 'sync');
+
+    assert.deepEqual(seen, [{ a: 1 }, undefined]);
+    assert.equal(listeners.size, 0);
   });
 });

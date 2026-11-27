@@ -19,19 +19,25 @@ export const STORAGE_KEYS = {
   tokens: 'tokens',
   layout: 'layout',
   singletons: 'singletons',
+  tweaks: 'tweaks',
   cachePrefix: 'cache:',
 } as const;
 
 const PREFIX = 'ghx:';
 
+/** Key as it appears in the storage area, e.g. in `storage.onChanged` events. */
+export function areaKey(key: string): string {
+  return PREFIX + key;
+}
+
 export function createAreaStore(area: StorageAreaLike): KeyValueStore {
   return {
     async get(key) {
-      const fullKey = PREFIX + key;
+      const fullKey = areaKey(key);
       const items = await area.get(fullKey);
       return items[fullKey];
     },
-    set: (key, value) => area.set({ [PREFIX + key]: value }),
-    remove: (key) => area.remove(PREFIX + key),
+    set: (key, value) => area.set({ [areaKey(key)]: value }),
+    remove: (key) => area.remove(areaKey(key)),
   };
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { createFakeStorageArea } from '../../test/fakes/storage.ts';
-import { createAreaStore } from './storage.ts';
+import { areaKey, createAreaStore } from './storage.ts';
 
 describe('createAreaStore', () => {
   it('stores values under a prefixed key', async () => {
@@ -34,5 +34,11 @@ describe('createAreaStore', () => {
     area.failWith(new Error('QUOTA_BYTES quota exceeded'));
 
     await assert.rejects(createAreaStore(area).set('x', 1), /quota exceeded/);
+  });
+});
+
+describe('areaKey', () => {
+  it('prefixes keys like the store does', () => {
+    assert.equal(areaKey('tweaks'), 'ghx:tweaks');
   });
 });
