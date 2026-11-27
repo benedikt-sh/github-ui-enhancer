@@ -20,6 +20,7 @@ describe('DASHBOARD_WIDGETS', () => {
       'issue-list',
       'actions-runs',
       'recent-repos',
+      'dependabot-prs',
     ]);
     assert.equal(DASHBOARD_WIDGETS.some((definition) => definition.singleton), false);
   });

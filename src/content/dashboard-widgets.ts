@@ -3,6 +3,7 @@ import { createId as createRandomId } from '../shared/layout.ts';
 import { eraseWidget } from '../shared/widget.ts';
 import type { ErasedWidgetDefinition } from '../shared/widget.ts';
 import { actionsRunsWidget } from '../widgets/actions-runs/actions-runs-widget.ts';
+import { dependabotPrsWidget } from '../widgets/dependabot-prs/dependabot-prs-widget.ts';
 import { issueListWidget } from '../widgets/issue-list/issue-list-widget.ts';
 import { pullRequestListWidget } from '../widgets/pr-list/pr-list-widget.ts';
 import { recentReposWidget } from '../widgets/recent-repos/recent-repos-widget.ts';
@@ -14,6 +15,7 @@ export const DASHBOARD_WIDGETS: readonly ErasedWidgetDefinition[] = [
   eraseWidget(issueListWidget),
   eraseWidget(actionsRunsWidget),
   eraseWidget(recentReposWidget),
+  eraseWidget(dependabotPrsWidget),
 ];
 
 interface DefaultEntry {
@@ -22,7 +24,8 @@ interface DefaultEntry {
   readonly width: WidgetWidth;
 }
 
-// Actions runs are left out on purpose: without a chosen repository they would only show a picker.
+// Actions runs and Dependabot are left out on purpose: without chosen repositories they would
+// only show a picker.
 const DEFAULT_ENTRIES: readonly DefaultEntry[] = [
   { type: pullRequestListWidget.type, preset: 'review-requested', width: 'half' },
   { type: pullRequestListWidget.type, preset: 'assigned', width: 'half' },

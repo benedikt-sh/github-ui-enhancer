@@ -6,4 +6,5 @@
 @import '../widgets/issue-list/issue-list.css';
 @import '../widgets/actions-runs/actions-runs.css';
 @import '../widgets/recent-repos/recent-repos.css';
+@import '../widgets/dependabot-prs/dependabot-prs.css';
 @import './tweaks/tweaks.css';
