@@ -52,7 +52,7 @@ describe('tweaksSection', () => {
     await section.loaded;
 
     const legends = [...section.element.querySelectorAll('legend')].map((l) => l.textContent);
-    assert.deepEqual(legends, ['Dashboard']);
+    assert.deepEqual(legends, ['Dashboard', 'Header bar']);
     assert.equal(enhanced.disabled, false);
     assert.equal(enhanced.checked, true);
     assert.equal(box(section.element, "Hide GitHub's changelog").checked, true);
@@ -70,6 +70,7 @@ describe('tweaksSection', () => {
     assert.deepEqual(area.snapshot()['ghx:tweaks'], {
       'dashboard.enhanced': false,
       'dashboard.hideChangelog': true,
+      'header.pinnedRepos': false,
     });
     assert.equal(section.element.querySelector('.ghx-tweaks__status')?.textContent, 'Saved.');
   });

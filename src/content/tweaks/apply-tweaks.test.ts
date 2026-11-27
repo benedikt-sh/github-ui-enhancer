@@ -19,8 +19,22 @@ describe('applyTweaks', () => {
       changelogHider: recorder(calls, 'hider'),
     };
 
-    applyTweaks({ 'dashboard.enhanced': true, 'dashboard.hideChangelog': false }, targets);
-    applyTweaks({ 'dashboard.enhanced': false, 'dashboard.hideChangelog': true }, targets);
+    applyTweaks(
+      {
+        'dashboard.enhanced': true,
+        'dashboard.hideChangelog': false,
+        'header.pinnedRepos': false,
+      },
+      targets,
+    );
+    applyTweaks(
+      {
+        'dashboard.enhanced': false,
+        'dashboard.hideChangelog': true,
+        'header.pinnedRepos': true,
+      },
+      targets,
+    );
 
     assert.deepEqual(calls, ['dashboard:start', 'hider:stop', 'dashboard:stop', 'hider:start']);
   });

@@ -8,13 +8,18 @@ describe('tweaks', () => {
     assert.deepEqual(defaultTweaks(), {
       'dashboard.enhanced': true,
       'dashboard.hideChangelog': false,
+      'header.pinnedRepos': false,
     });
   });
 
   it('keeps stored booleans and falls back per key', () => {
     assert.deepEqual(
       parseTweaks({ 'dashboard.enhanced': false, 'dashboard.hideChangelog': 'yes', other: true }),
-      { 'dashboard.enhanced': false, 'dashboard.hideChangelog': false },
+      {
+        'dashboard.enhanced': false,
+        'dashboard.hideChangelog': false,
+        'header.pinnedRepos': false,
+      },
     );
     assert.deepEqual(parseTweaks([true]), defaultTweaks());
   });
@@ -30,6 +35,10 @@ describe('tweaks', () => {
     assert.deepEqual(
       tweaksOfArea('dashboard').map((tweak) => tweak.id),
       ['dashboard.enhanced', 'dashboard.hideChangelog'],
+    );
+    assert.deepEqual(
+      tweaksOfArea('header').map((tweak) => tweak.id),
+      ['header.pinnedRepos'],
     );
   });
 });

@@ -20,6 +20,7 @@ export const STORAGE_KEYS = {
   layout: 'layout',
   singletons: 'singletons',
   tweaks: 'tweaks',
+  headerPins: 'headerPins',
   cachePrefix: 'cache:',
 } as const;
 
