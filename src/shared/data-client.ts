@@ -10,6 +10,8 @@ export function createWidgetDataClient(send: RequestSender): WidgetData {
     subscribedIssues: (options) => send('data.subscribedIssues', withOptions({}, options)),
     workflowRuns: (repo, options) => send('data.workflowRuns', withOptions({ repo }, options)),
     branches: (repo, options) => send('data.branches', withOptions({ repo }, options)),
+    recentRepositories: (options) =>
+      send('data.recentRepositories', withOptions({}, options)),
   };
 }
 

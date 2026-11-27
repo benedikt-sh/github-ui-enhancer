@@ -106,6 +106,31 @@ export interface WorkflowRunItem {
   readonly runStartedAt: string | null;
 }
 
+export const REPO_ACTIVITY_KINDS = [
+  'push',
+  'pull_request',
+  'review',
+  'issue',
+  'comment',
+  'create',
+  'release',
+  'other',
+] as const;
+
+export type RepoActivityKind = (typeof REPO_ACTIVITY_KINDS)[number];
+
+/** A repository the user was active in, aggregated from the user's own events. */
+export interface RecentRepoItem {
+  readonly repo: RepoRef;
+  readonly url: string;
+  readonly lastActivityAt: string;
+  readonly lastActivity: RepoActivityKind;
+  /** Branch of the latest push or created branch, null for other activities. */
+  readonly branch: string | null;
+  /** Number of matching events within the window GitHub keeps (at most 90 days). */
+  readonly activityCount: number;
+}
+
 export interface BranchItem {
   readonly name: string;
   readonly protected: boolean;

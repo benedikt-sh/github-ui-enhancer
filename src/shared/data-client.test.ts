@@ -25,6 +25,7 @@ describe('createWidgetDataClient', () => {
     await client.subscribedIssues({ limit: 7 });
     await client.workflowRuns(repo, { branch: 'main' });
     await client.branches(repo, { forceRefresh: true });
+    await client.recentRepositories({ kinds: ['push'] });
 
     assert.deepEqual(sent, [
       { op: 'data.repoIndex', params: { options: { forceRefresh: true } } },
@@ -36,6 +37,7 @@ describe('createWidgetDataClient', () => {
       { op: 'data.subscribedIssues', params: { options: { limit: 7 } } },
       { op: 'data.workflowRuns', params: { repo, options: { branch: 'main' } } },
       { op: 'data.branches', params: { repo, options: { forceRefresh: true } } },
+      { op: 'data.recentRepositories', params: { options: { kinds: ['push'] } } },
     ]);
   });
 
@@ -48,6 +50,7 @@ describe('createWidgetDataClient', () => {
     await client.subscribedIssues();
     await client.workflowRuns(repo);
     await client.branches(repo);
+    await client.recentRepositories();
 
     for (const { params } of sent) {
       assert.equal(Object.hasOwn(params as object, 'options'), false);

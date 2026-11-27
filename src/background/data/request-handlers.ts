@@ -1,9 +1,16 @@
-import type { ListOptions, RequestOptions, WorkflowRunOptions } from '../../shared/data.ts';
+import type {
+  ListOptions,
+  RecentRepositoryOptions,
+  RequestOptions,
+  WorkflowRunOptions,
+} from '../../shared/data.ts';
 import { ApiError } from '../../shared/errors.ts';
-import { isRecord, isString } from '../../shared/guards.ts';
+import { isOneOf, isRecord, isString } from '../../shared/guards.ts';
 import type { RequestHandlers } from '../../shared/messages.ts';
-import type { RepoRef } from '../../shared/types.ts';
+import { REPO_ACTIVITY_KINDS } from '../../shared/types.ts';
+import type { RepoActivityKind, RepoRef } from '../../shared/types.ts';
 import type { TokenRegistry } from '../tokens/token-registry.ts';
+import { RUN_CONCLUSIONS, RUN_STATUSES } from './values.ts';
 import type { DataLayer } from './widget-data.ts';
 
 /** Far above any sensible search, low enough to keep junk out of cache keys. */
@@ -64,9 +71,30 @@ export function parseListOptions(value: unknown): ListOptions {
   return { ...parseRequestOptions(value), ...(limit === undefined ? {} : { limit }) };
 }
 
+const RUN_FILTERS = [...RUN_STATUSES, ...RUN_CONCLUSIONS];
+
+function isRunFilter(value: unknown): value is NonNullable<WorkflowRunOptions['status']> {
+  return isOneOf(RUN_FILTERS, value);
+}
+
+function isActivityKinds(value: unknown): value is RepoActivityKind[] {
+  return Array.isArray(value) && value.every((kind) => isOneOf(REPO_ACTIVITY_KINDS, kind));
+}
+
 export function parseWorkflowRunOptions(value: unknown): WorkflowRunOptions {
-  const branch = optional(optionsRecord(value), 'branch', isString);
-  return { ...parseListOptions(value), ...(branch === undefined ? {} : { branch }) };
+  const record = optionsRecord(value);
+  const branch = optional(record, 'branch', isString);
+  const status = optional(record, 'status', isRunFilter);
+  return {
+    ...parseListOptions(value),
+    ...(branch === undefined ? {} : { branch }),
+    ...(status === undefined ? {} : { status }),
+  };
+}
+
+export function parseRecentRepositoryOptions(value: unknown): RecentRepositoryOptions {
+  const kinds = optional(optionsRecord(value), 'kinds', isActivityKinds);
+  return { ...parseListOptions(value), ...(kinds === undefined ? {} : { kinds }) };
 }
 
 export function parseRepo(value: unknown): RepoRef {
@@ -116,6 +144,8 @@ export function createRequestHandlers(options: RequestHandlerOptions): RequestHa
       data.workflowRuns(parseRepo(params.repo), parseWorkflowRunOptions(params.options)),
     'data.branches': async (params) =>
       data.branches(parseRepo(params.repo), parseRequestOptions(params.options)),
+    'data.recentRepositories': async (params) =>
+      data.recentRepositories(parseRecentRepositoryOptions(params.options)),
     'tokens.summary': () => registry.list(),
     'tokens.list': () => registry.list(),
     'extension.openOptions': async () => {

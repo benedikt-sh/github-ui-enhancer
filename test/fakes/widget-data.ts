@@ -40,6 +40,7 @@ export function createFakeWidgetData(): FakeWidgetData {
     subscribedIssues: (...args) => call('subscribedIssues', args),
     workflowRuns: (...args) => call('workflowRuns', args),
     branches: (...args) => call('branches', args),
+    recentRepositories: (...args) => call('recentRepositories', args),
     handle(method, handler) {
       handlers.set(method, handler as unknown as (...args: unknown[]) => Promise<unknown>);
       return fake;

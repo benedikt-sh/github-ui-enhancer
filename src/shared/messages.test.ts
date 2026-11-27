@@ -34,6 +34,7 @@ function handlers(overrides: Partial<RequestHandlers> = {}): RequestHandlers {
     'data.subscribedIssues': unexpected,
     'data.workflowRuns': unexpected,
     'data.branches': unexpected,
+    'data.recentRepositories': unexpected,
     'tokens.summary': unexpected,
     'extension.openOptions': unexpected,
     'tokens.list': unexpected,

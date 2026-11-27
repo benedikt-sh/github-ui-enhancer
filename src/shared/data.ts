@@ -3,9 +3,13 @@ import type {
   BranchItem,
   IssueItem,
   PullRequestItem,
+  RecentRepoItem,
+  RepoActivityKind,
   RepoRef,
   RepoSummary,
+  WorkflowRunConclusion,
   WorkflowRunItem,
+  WorkflowRunStatus,
 } from './types.ts';
 
 export interface RequestOptions {
@@ -18,6 +22,13 @@ export interface ListOptions extends RequestOptions {
 
 export interface WorkflowRunOptions extends ListOptions {
   readonly branch?: string;
+  /** Only runs with this status or conclusion, e.g. `failure`. */
+  readonly status?: WorkflowRunStatus | WorkflowRunConclusion;
+}
+
+export interface RecentRepositoryOptions extends ListOptions {
+  /** Only events of these kinds count, all kinds when omitted. */
+  readonly kinds?: readonly RepoActivityKind[];
 }
 
 /**
@@ -46,4 +57,8 @@ export interface WidgetData {
   subscribedIssues(options?: ListOptions): Promise<DataResult<IssueItem[]>>;
   workflowRuns(repo: RepoRef, options?: WorkflowRunOptions): Promise<DataResult<WorkflowRunItem[]>>;
   branches(repo: RepoRef, options?: RequestOptions): Promise<DataResult<BranchItem[]>>;
+  /** Repositories with the user's own recent activity, newest activity first. */
+  recentRepositories(
+    options?: RecentRepositoryOptions,
+  ): Promise<DataResult<RecentRepoItem[]>>;
 }

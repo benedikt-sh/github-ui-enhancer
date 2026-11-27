@@ -25,6 +25,8 @@ import {
 import { byNewest, clampLimit, mergeParts, type Part } from './merge.ts';
 import type { SearchKind } from './queries.ts';
 import { createSearchBatcher } from './search-batcher.ts';
+import { aggregateRecentRepos, isRecentEvent, mapEvent } from './recent-repos.ts';
+import type { RecentEvent } from './recent-repos.ts';
 import { scopeSearchQuery } from './search-scope.ts';
 import {
   type CachedList,
@@ -43,6 +45,9 @@ export const SUBSCRIBED_TTL_MS = 60 * 1000;
 export const WORKFLOW_RUNS_TTL_MS = 30 * 1000;
 export const BRANCHES_TTL_MS = 5 * 60 * 1000;
 export const BRANCHES_MAX_PAGES = 3;
+export const EVENTS_TTL_MS = 5 * 60 * 1000;
+/** GitHub keeps at most 300 events per user, which are three pages. */
+export const EVENTS_MAX_PAGES = 3;
 
 const PER_PAGE = 100;
 /** Bumped whenever the shape of cached values changes. */
@@ -466,12 +471,13 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
       }
       const limit = clampLimit(runOptions?.limit);
       const branch = runOptions?.branch?.trim() || null;
+      const status = runOptions?.status ?? null;
       const path = repoPath(repo, '/actions/runs');
       const result = await repoScoped<WorkflowRunItem>(
         repo,
         tokens,
         {
-          key: cacheKey('runs', routeKey(repo), branch, limit),
+          key: cacheKey('runs', routeKey(repo), branch, status, limit),
           ttl: WORKFLOW_RUNS_TTL_MS,
           validate: isCachedListOf(isWorkflowRunItem),
           options: runOptions,
@@ -480,7 +486,12 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
           conditionalGet(
             token.secret,
             path,
-            { branch: branch ?? undefined, per_page: limit, exclude_pull_requests: true },
+            {
+              branch: branch ?? undefined,
+              status: status ?? undefined,
+              per_page: limit,
+              exclude_pull_requests: true,
+            },
             previous,
             (data) => {
               const runs = isRecord(data) ? data['workflow_runs'] : undefined;
@@ -519,6 +530,42 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
             'branches',
           ),
       );
+    },
+
+    async recentRepositories(recentOptions) {
+      const tokens = (await activeTokens()).filter((token) => token.login !== null);
+      if (tokens.length === 0) {
+        return noTokens();
+      }
+      const limit = clampLimit(recentOptions?.limit);
+      const parts = await fanOut<RecentEvent>(tokens, (token) => ({
+        key: cacheKey('events', token.id),
+        bucket: 'core',
+        ttl: EVENTS_TTL_MS,
+        validate: isCachedListOf(isRecentEvent),
+        options: recentOptions,
+        load: async () => {
+          const path = `/users/${encodeURIComponent(token.login ?? '')}/events`;
+          const result = await client.restGetPages(token.secret, path, {
+            query: { per_page: PER_PAGE },
+            maxPages: EVENTS_MAX_PAGES,
+          });
+          if (!result.pages.every(Array.isArray)) {
+            throw invalidResponse(`GitHub GET ${path} did not return a list.`);
+          }
+          // The page cap matches what GitHub keeps, so a cut-off list is no error here.
+          return loaded(result.pages.flatMap((page) => mapAll(page, mapEvent)));
+        },
+      }));
+      const events = mergeParts(parts, {
+        identify: (event) => event.id,
+        compare: byNewest((event) => event.createdAt),
+        now: nowIso(),
+      });
+      return {
+        ...events,
+        data: aggregateRecentRepos(events.data, recentOptions?.kinds, limit),
+      };
     },
 
     async clear() {

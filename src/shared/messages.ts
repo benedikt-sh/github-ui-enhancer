@@ -1,4 +1,10 @@
-import type { DataResult, ListOptions, RequestOptions, WorkflowRunOptions } from './data.ts';
+import type {
+  DataResult,
+  ListOptions,
+  RecentRepositoryOptions,
+  RequestOptions,
+  WorkflowRunOptions,
+} from './data.ts';
 import { ApiError, isApiErrorInfo, toApiErrorInfo } from './errors.ts';
 import type { ApiErrorInfo } from './errors.ts';
 import { isRecord, isString } from './guards.ts';
@@ -7,6 +13,7 @@ import type {
   BranchItem,
   IssueItem,
   PullRequestItem,
+  RecentRepoItem,
   RepoRef,
   RepoSummary,
   WorkflowRunItem,
@@ -47,6 +54,11 @@ export interface RequestMap {
     params: { repo: RepoRef; options?: RequestOptions };
     result: DataResult<BranchItem[]>;
   };
+  'data.recentRepositories': {
+    scope: 'content';
+    params: { options?: RecentRepositoryOptions };
+    result: DataResult<RecentRepoItem[]>;
+  };
   'tokens.summary': { scope: 'content'; params: Record<string, never>; result: TokenInfo[] };
   'extension.openOptions': { scope: 'content'; params: Record<string, never>; result: null };
   'tokens.list': { scope: 'extension'; params: Record<string, never>; result: TokenInfo[] };
@@ -76,6 +88,7 @@ export const OPERATION_SCOPES: { readonly [K in Operation]: RequestMap[K]['scope
   'data.subscribedIssues': 'content',
   'data.workflowRuns': 'content',
   'data.branches': 'content',
+  'data.recentRepositories': 'content',
   'tokens.summary': 'content',
   'extension.openOptions': 'content',
   'tokens.list': 'extension',

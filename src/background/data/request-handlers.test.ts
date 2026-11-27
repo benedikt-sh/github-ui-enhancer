@@ -51,6 +51,7 @@ function recordingData(): RecordingData {
     subscribedIssues: record('subscribedIssues'),
     workflowRuns: record('workflowRuns'),
     branches: record('branches'),
+    recentRepositories: record('recentRepositories'),
     async clear() {
       data.clears += 1;
     },
@@ -99,6 +100,9 @@ describe('createRequestHandlers', () => {
     await handlers['data.subscribedIssues']({ options: { forceRefresh: false, limit: 3 } }, SENDER);
     await handlers['data.workflowRuns']({ repo, options: { branch: 'main', limit: 2 } }, SENDER);
     await handlers['data.branches']({ repo: { ...repo, extra: 1 } as typeof repo }, SENDER);
+    await handlers['data.workflowRuns']({ repo, options: { status: 'failure' } }, SENDER);
+    await handlers['data.recentRepositories']({ options: { kinds: ['push'], limit: 4 } }, SENDER);
+    await handlers['data.recentRepositories']({}, SENDER);
 
     assert.deepEqual(data.calls, [
       ['repoIndex', { forceRefresh: true }],
@@ -108,6 +112,9 @@ describe('createRequestHandlers', () => {
       ['subscribedIssues', { forceRefresh: false, limit: 3 }],
       ['workflowRuns', repo, { branch: 'main', limit: 2 }],
       ['branches', repo, {}],
+      ['workflowRuns', repo, { status: 'failure' }],
+      ['recentRepositories', { limit: 4, kinds: ['push'] }],
+      ['recentRepositories', {}],
     ]);
   });
 
@@ -125,6 +132,15 @@ describe('createRequestHandlers', () => {
         SENDER,
       ),
       handlers['data.branches']({ repo: null as never }, SENDER),
+      handlers['data.workflowRuns'](
+        { repo: { owner: 'a', name: 'b' }, options: { status: 'broken' } as never },
+        SENDER,
+      ),
+      handlers['data.recentRepositories'](
+        { options: { kinds: ['push', 'dance'] } as never },
+        SENDER,
+      ),
+      handlers['data.recentRepositories']({ options: { kinds: 'push' } as never }, SENDER),
       handlers['tokens.add']({ secret: 1 as never }, SENDER),
       handlers['tokens.add']({ secret: 'x', owner: 1 as never }, SENDER),
       handlers['tokens.remove']({ id: undefined as never }, SENDER),

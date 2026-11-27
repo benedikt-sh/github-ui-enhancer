@@ -29,6 +29,8 @@ import {
   BRANCHES_MAX_PAGES,
   createDataLayer,
   type DataLayer,
+  EVENTS_MAX_PAGES,
+  EVENTS_TTL_MS,
   type DataLayerOptions,
   REPO_INDEX_MAX_PAGES,
   REPO_INDEX_TTL_MS,
@@ -757,3 +759,115 @@ describe('clear', () => {
     );
   });
 });
+
+describe('workflowRuns with a status filter', () => {
+  it('passes the status and caches it separately', async () => {
+    const { data, fake } = setup();
+    fake.on(withToken(ACME, `${API}/repos/acme/web/actions/runs`), {
+      body: { workflow_runs: [restWorkflowRun()] },
+    });
+
+    await data.workflowRuns({ owner: 'acme', name: 'web' }, { status: 'failure' });
+    await data.workflowRuns({ owner: 'acme', name: 'web' });
+
+    assert.deepEqual(
+      fake.requests.map((request) => new URL(request.url).searchParams.get('status')),
+      ['failure', null],
+    );
+  });
+});
+
+describe('recentRepositories', () => {
+  const EVENTS = `${API}/users/alice/events`;
+
+  function restEvent(id: string, repo: string, type: string, at: string, ref?: string) {
+    return {
+      id,
+      type,
+      created_at: at,
+      repo: { name: repo },
+      payload: ref === undefined ? {} : { ref },
+    };
+  }
+
+  it('merges the events of all tokens into repositories, newest activity first', async () => {
+    const { data, fake } = setup();
+    const at = '2026-11-27T09:00:00Z';
+    const shared = restEvent('3', 'acme/web', 'PushEvent', at, 'refs/heads/x');
+    fake.on(withToken(ALICE, EVENTS), {
+      body: [
+        restEvent('4', 'alice/dotfiles', 'IssueCommentEvent', '2026-11-27T09:30:00Z'),
+        shared,
+        { broken: true },
+      ],
+    });
+    fake.on(withToken(ACME, EVENTS), {
+      body: [shared, restEvent('1', 'acme/web', 'PullRequestEvent', '2026-11-26T09:00:00Z')],
+    });
+
+    const all = await data.recentRepositories();
+    const code = await data.recentRepositories({ kinds: ['push', 'pull_request'], limit: 1 });
+
+    assert.deepEqual(
+      all.data.map((item) => [item.repo.name, item.lastActivity, item.activityCount]),
+      [
+        ['dotfiles', 'comment', 1],
+        ['web', 'push', 2],
+      ],
+    );
+    assert.equal(all.data[1]?.branch, 'x');
+    assert.deepEqual(
+      code.data.map((item) => item.repo.name),
+      ['web'],
+    );
+    assert.equal(requestsTo(fake, EVENTS).length, 2);
+    assert.equal(new URL(fake.requests[0]!.url).searchParams.get('per_page'), '100');
+  });
+
+  it('caches events and follows at most the pages GitHub keeps', async () => {
+    const { data, fake, clock } = setup([ALICE_TOKEN]);
+    const pages = Array.from({ length: EVENTS_MAX_PAGES + 1 }, (_, index) => index + 1);
+    for (const page of pages) {
+      fake.on(
+        (request) => request.url.startsWith(EVENTS) && request.url.includes(`page=${page}`),
+        {
+          headers: { link: `<${EVENTS}?per_page=100&page=${page + 1}>; rel="next"` },
+          body: [
+            restEvent(`e${page}`, `alice/repo${page}`, 'PushEvent', `2026-11-2${page}T00:00:00Z`),
+          ],
+        },
+      );
+    }
+    fake.once(withToken(ALICE, EVENTS), {
+      headers: { link: `<${EVENTS}?per_page=100&page=2>; rel="next"` },
+      body: [restEvent('e1', 'alice/repo1', 'PushEvent', '2026-11-21T00:00:00Z')],
+    });
+
+    const first = await data.recentRepositories();
+    await data.recentRepositories();
+    clock.now += EVENTS_TTL_MS;
+    await data.recentRepositories();
+
+    assert.equal(first.data.length, EVENTS_MAX_PAGES);
+    assert.deepEqual(first.errors, []);
+    assert.equal(requestsTo(fake, EVENTS).length, EVENTS_MAX_PAGES * 2);
+  });
+
+  it('answers without tokens and reports non-list responses per token', async () => {
+    const none = setup([]);
+    assert.deepEqual(
+      (await none.data.recentRepositories()).errors.map((error) => error.kind),
+      ['no_tokens'],
+    );
+
+    const { data, fake } = setup([ALICE_TOKEN]);
+    fake.on(withToken(ALICE, EVENTS), { body: { message: 'odd' } });
+    const result = await data.recentRepositories();
+    assert.deepEqual(result.data, []);
+    assert.deepEqual(
+      result.errors.map((error) => error.kind),
+      ['invalid_response'],
+    );
+  });
+});
+
