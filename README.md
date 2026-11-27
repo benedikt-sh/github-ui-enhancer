@@ -2,12 +2,13 @@
 
 Browser-Erweiterung für Chrome/Chromium und Firefox, die die Startseite von github.com durch ein konfigurierbares Dashboard ersetzt.
 
-- **Repo-Suche über alle Orgas:** Ganz oben steht eine Suche über alle Repositories deines Accounts und aller Organisationen, für die du ein Token hinterlegt hast. Sie läuft lokal und braucht keinen Request pro Tastendruck. Der Repo-Index wird eine Stunde lang zwischengespeichert.
 - **Widgets, beliebig oft platzierbar:**
   - Pull Requests (zugewiesen, Review angefragt, selbst erstellt oder eigener Suchfilter)
   - Issues (zugewiesen, beobachtet, selbst erstellt oder eigener Suchfilter)
   - GitHub-Actions-Runs eines Repos mit Branch-Filter
+  - Repo-Suche über alle Repositories deines Accounts und aller Organisationen, für die du ein Token hinterlegt hast. Sie läuft lokal ohne Request pro Tastendruck, der Repo-Index wird eine Stunde lang zwischengespeichert. GitHubs eigene Suche mit Strg+K bleibt unberührt.
 - **GitHubs Originalseite** bleibt über einen Schalter im Dashboard erreichbar. Der Feed liegt weiterhin unter `/feed`.
+- **Tweaks** in den Einstellungen, nach Bereichen gruppiert. Im Bereich „Dashboard“ lässt sich das erweiterte Dashboard komplett abschalten und GitHubs Changelog-Widget ausblenden. Änderungen wirken sofort, auch in offenen Tabs.
 
 Die Daten kommen ausschließlich aus der offiziellen GitHub-API. Die Erweiterung schreibt nie etwas nach GitHub.
 
