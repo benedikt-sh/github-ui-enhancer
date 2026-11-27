@@ -6,7 +6,9 @@ import type { DomEnvironment } from '../../../test/dom.ts';
 import { renderPage } from './github-page.fixture.ts';
 import {
   findChangelogWidgets,
+  findHeaderSlot,
   findMountPoint,
+  isInHeaderSlot,
   isLoggedIn,
   isStartPath,
   pageLogin,
@@ -193,5 +195,76 @@ describe('findChangelogWidgets', () => {
     render('<main><a href="https://github.com/">Home</a><a>no href</a></main>');
 
     assert.deepEqual(findChangelogWidgets(document, null), []);
+  });
+});
+
+describe('findHeaderSlot', () => {
+  let dom: DomEnvironment;
+  before(() => {
+    dom = installDom();
+  });
+  after(() => dom.cleanup());
+
+  function render(globalBar: string): void {
+    document.body.innerHTML = `
+      <header class="AppHeader" role="banner"><div class="AppHeader-globalBar">${globalBar}</div>
+      </header>`;
+  }
+
+  const START = '<div class="AppHeader-globalBar-start" id="start"><a id="logo"></a></div>';
+
+  it('prefers the spot in front of the search', () => {
+    render(`${START}<div class="AppHeader-globalBar-end" id="end">
+      <div id="other"></div><div class="AppHeader-search" id="search"></div></div>`);
+
+    assert.deepEqual(findHeaderSlot(document, null), {
+      parent: document.getElementById('end'),
+      before: document.getElementById('search'),
+    });
+  });
+
+  it('prepends to the end part without search and skips the excluded element', () => {
+    render(`${START}<div class="AppHeader-globalBar-end" id="end">
+      <div id="own"></div><div id="actions"></div></div>`);
+    const own = document.getElementById('own');
+
+    assert.equal(findHeaderSlot(document, own)?.before, document.getElementById('actions'));
+    assert.equal(findHeaderSlot(document, null)?.before, own);
+
+    render(`${START}<div class="AppHeader-globalBar-end" id="end"></div>`);
+    assert.deepEqual(findHeaderSlot(document, null), {
+      parent: document.getElementById('end'),
+      before: null,
+    });
+  });
+
+  it('appends to the start part when the end part is missing', () => {
+    render(START);
+
+    assert.deepEqual(findHeaderSlot(document, null), {
+      parent: document.getElementById('start'),
+      before: null,
+    });
+  });
+
+  it('fails open on unknown header markup', () => {
+    document.body.innerHTML = `
+      <header role="banner"><div class="AppHeader-globalBar-end"></div></header>
+      <div class="AppHeader-globalBar-start"></div>`;
+
+    assert.equal(findHeaderSlot(document, null), null);
+  });
+
+  it('tells whether an element sits in a slot', () => {
+    render(`${START}<div class="AppHeader-globalBar-end"><span id="pins"></span></div>`);
+    const pins = document.getElementById('pins');
+    assert.ok(pins !== null);
+    assert.equal(isInHeaderSlot(pins), true);
+
+    pins.remove();
+    assert.equal(isInHeaderSlot(pins), false);
+
+    document.body.append(pins);
+    assert.equal(isInHeaderSlot(pins), false);
   });
 });

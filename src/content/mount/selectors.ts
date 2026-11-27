@@ -123,3 +123,58 @@ function onlyBlogLinks(element: Element): boolean {
     (link.getAttribute('href') ?? '').startsWith(BLOG_ORIGIN),
   );
 }
+
+/** `before` names a direct child of `parent`, the slot only counts when that child exists. */
+export type HeaderSlotSelector =
+  | { readonly parent: string; readonly insert: 'start' | 'end' }
+  | { readonly parent: string; readonly insert: 'before'; readonly before: string };
+
+/**
+ * GitHub's global bar (`header.AppHeader .AppHeader-globalBar`) has a start part with logo and
+ * page context and an end part with search, actions and avatar. Both are flex rows, so an extra
+ * child in front of the search or behind the page context keeps the layout intact.
+ */
+export const HEADER_SLOT_SELECTORS = [
+  {
+    parent: 'header.AppHeader .AppHeader-globalBar-end',
+    insert: 'before',
+    before: '.AppHeader-search',
+  },
+  { parent: 'header.AppHeader .AppHeader-globalBar-end', insert: 'start' },
+  { parent: 'header.AppHeader .AppHeader-globalBar-start', insert: 'end' },
+] as const satisfies readonly HeaderSlotSelector[];
+
+const HEADER_SLOT_PARENTS = HEADER_SLOT_SELECTORS.map((slot) => slot.parent).join(', ');
+
+export interface HeaderSlot {
+  readonly parent: Element;
+  /** Insert with `parent.insertBefore(element, before)`, `null` appends. */
+  readonly before: Element | null;
+}
+
+/** `exclude` is the extension's own element, it never serves as reference point. */
+export function findHeaderSlot(document: Document, exclude: Element | null): HeaderSlot | null {
+  for (const slot of HEADER_SLOT_SELECTORS) {
+    const parent = document.querySelector(slot.parent);
+    if (parent === null) {
+      continue;
+    }
+    const children = [...parent.children].filter((child) => child !== exclude);
+    if (slot.insert === 'end') {
+      return { parent, before: null };
+    }
+    if (slot.insert === 'start') {
+      return { parent, before: children[0] ?? null };
+    }
+    const before = children.find((child) => child.matches(slot.before));
+    if (before !== undefined) {
+      return { parent, before };
+    }
+  }
+  return null;
+}
+
+/** Cheap check for every mutation: does the element still sit in one of the header slots? */
+export function isInHeaderSlot(element: Element): boolean {
+  return element.isConnected && element.parentElement?.matches(HEADER_SLOT_PARENTS) === true;
+}
