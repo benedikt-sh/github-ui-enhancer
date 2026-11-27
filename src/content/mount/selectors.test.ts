@@ -4,7 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import { installDom } from '../../../test/dom.ts';
 import type { DomEnvironment } from '../../../test/dom.ts';
 import { renderPage } from './github-page.fixture.ts';
-import { findMountPoint, isLoggedIn, isStartPath } from './selectors.ts';
+import { findMountPoint, isLoggedIn, isStartPath, pageLogin } from './selectors.ts';
 
 describe('selectors', () => {
   let dom: DomEnvironment;
@@ -32,6 +32,17 @@ describe('selectors', () => {
 
     renderPage(document, { login: null });
     assert.equal(isLoggedIn(document), false);
+  });
+
+  it('reads the trimmed login of the signed-in user', () => {
+    renderPage(document, { login: ' octocat ' });
+    assert.equal(pageLogin(document), 'octocat');
+
+    renderPage(document, { login: '' });
+    assert.equal(pageLogin(document), null);
+
+    renderPage(document, { login: null });
+    assert.equal(pageLogin(document), null);
   });
 
   it('prefers main as container', () => {

@@ -28,8 +28,12 @@ export function isStartPath(pathname: string): boolean {
 
 /** Logged-out visitors get the marketing page on `/`, where the meta tag is empty. */
 export function isLoggedIn(document: Document): boolean {
-  const content = document.querySelector(USER_LOGIN_META)?.getAttribute('content') ?? '';
-  return content.trim() !== '';
+  return pageLogin(document) !== null;
+}
+
+export function pageLogin(document: Document): string | null {
+  const content = document.querySelector(USER_LOGIN_META)?.getAttribute('content')?.trim() ?? '';
+  return content === '' ? null : content;
 }
 
 /**
