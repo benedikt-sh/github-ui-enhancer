@@ -35,6 +35,7 @@ Hintergrund, Recherche und Begründungen stehen in `docs/machbarkeit.md`, der Um
 - Möglichst jeder Code-Pfad ist durch Tests abgedeckt, auch Fehler- und Randfälle (abgelaufenes Token, 403, leere Ergebnisse, Paginierung, Navigation weg von der Startseite).
 - Code wird so geschnitten, dass er testbar ist: Logik getrennt von Browser-APIs, Abhängigkeiten werden hineingereicht statt global geholt.
 - Nur reine Verdrahtung in den Einstiegspunkten darf ungetestet bleiben.
+- Tests mit Zeitbudgets heißen `*.perf.ts` und laufen nur über `pnpm test:perf`, nicht in `pnpm check`. Unter Last (z. B. viele parallele Agents) schlagen sie sonst zufällig fehl.
 
 ### Kommentare
 
