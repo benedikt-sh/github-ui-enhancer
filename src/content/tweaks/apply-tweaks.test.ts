@@ -12,11 +12,12 @@ function recorder(calls: string[], name: string): Toggleable {
 }
 
 describe('applyTweaks', () => {
-  it('starts and stops the dashboard and the changelog hider', () => {
+  it('starts and stops the dashboard, the changelog hider and the header pins', () => {
     const calls: string[] = [];
     const targets = {
       dashboard: recorder(calls, 'dashboard'),
       changelogHider: recorder(calls, 'hider'),
+      headerPins: recorder(calls, 'pins'),
     };
 
     applyTweaks(
@@ -36,6 +37,13 @@ describe('applyTweaks', () => {
       targets,
     );
 
-    assert.deepEqual(calls, ['dashboard:start', 'hider:stop', 'dashboard:stop', 'hider:start']);
+    assert.deepEqual(calls, [
+      'dashboard:start',
+      'hider:stop',
+      'pins:stop',
+      'dashboard:stop',
+      'hider:start',
+      'pins:start',
+    ]);
   });
 });
