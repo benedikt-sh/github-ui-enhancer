@@ -1,6 +1,7 @@
 import { isRecord, isString } from '../../shared/guards.ts';
 import { parseRepoFullName, repoFullName } from '../../shared/repo.ts';
 import type { RepoRef } from '../../shared/types.ts';
+import type { SelectOption } from '../../ui/forms.ts';
 import { repoUrl } from '../../ui/row.ts';
 
 export const RUN_LIMITS = [5, 10, 20] as const;
@@ -9,14 +10,18 @@ export type RunLimit = (typeof RUN_LIMITS)[number];
 
 export const DEFAULT_RUN_LIMIT: RunLimit = 10;
 
-export const RUN_STATUS_FILTERS = ['all', 'failure'] as const;
+const RUN_STATUS_FILTERS = ['all', 'failure'] as const;
 
 export type RunStatusFilter = (typeof RUN_STATUS_FILTERS)[number];
 
-export const RUN_STATUS_FILTER_LABELS: Record<RunStatusFilter, string> = {
+const RUN_STATUS_FILTER_LABELS: Record<RunStatusFilter, string> = {
   all: 'All runs',
   failure: 'Failed runs',
 };
+
+export const RUN_STATUS_FILTER_OPTIONS: readonly SelectOption[] = RUN_STATUS_FILTERS.map(
+  (filter) => ({ value: filter, label: RUN_STATUS_FILTER_LABELS[filter] }),
+);
 
 export interface ActionsRunsConfig {
   readonly repo: RepoRef | null;
@@ -58,6 +63,10 @@ export function isRunStatusFilter(value: unknown): value is RunStatusFilter {
   return RUN_STATUS_FILTERS.some((filter) => filter === value);
 }
 
+export function parseRunStatusFilter(value: unknown): RunStatusFilter {
+  return isRunStatusFilter(value) ? value : 'all';
+}
+
 /** Configs stored before the status filter existed have no `status` and show all runs. */
 export function parseActionsRunsConfig(raw: unknown): ActionsRunsConfig {
   const defaults = defaultActionsRunsConfig();
@@ -66,12 +75,11 @@ export function parseActionsRunsConfig(raw: unknown): ActionsRunsConfig {
   }
   const repo = parseRepo(raw['repo']);
   const limit = raw['limit'];
-  const status = raw['status'];
   return {
     repo,
     branch: repo === null ? null : parseText(raw['branch']),
     limit: isRunLimit(limit) ? limit : defaults.limit,
-    status: isRunStatusFilter(status) ? status : defaults.status,
+    status: parseRunStatusFilter(raw['status']),
     title: parseText(raw['title']),
   };
 }

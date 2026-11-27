@@ -27,11 +27,18 @@
   white-space: nowrap;
 }
 
+.ghx-actions-runs__filters {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--base-size-8, 8px);
+  margin-left: auto;
+}
+
 .ghx-actions-runs__branch-picker {
   display: inline-flex;
   align-items: center;
   gap: var(--base-size-4, 4px);
-  margin-left: auto;
 }
 
 .ghx-actions-runs__branch {

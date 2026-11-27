@@ -142,6 +142,18 @@ function buttonByText(root: HTMLElement, text: string): HTMLButtonElement {
   return found;
 }
 
+function statusFilter(target: HTMLElement): HTMLSelectElement {
+  const element = target.querySelector<HTMLSelectElement>('.ghx-actions-runs__status-filter');
+  assert.ok(element);
+  return element;
+}
+
+function chooseStatus(target: HTMLElement, value: string): void {
+  const element = statusFilter(target);
+  element.value = value;
+  element.dispatchEvent(new Event('change'));
+}
+
 function allRunsLink(target: HTMLElement): string | null {
   return target.querySelector('.ghx-actions-runs__all')?.getAttribute('href') ?? null;
 }
@@ -211,6 +223,104 @@ describe('mountRunsView', () => {
     assert.ok(target.textContent?.includes('There are no workflow runs on dev.'));
     const select = target.querySelector('select');
     assert.equal(select?.value, 'dev');
+  });
+
+  it('keeps the status filter when picking a repo', async () => {
+    const data = createFakeWidgetData();
+    data.handle('repoIndex', async () => dataResult([repoSummary('octo/repo')]));
+    const ctx = createContext(data);
+    const target = document.createElement('div');
+    const config: ActionsRunsConfig = { ...defaultActionsRunsConfig(), status: 'failure' };
+    mountRunsView(target, ctx.context, config, createEnv().env);
+    await settle();
+    buttonByText(target, 'octo/repo').click();
+    assert.deepEqual(ctx.saved, [{ ...config, repo: REPO }]);
+    assert.equal(statusFilter(target).value, 'failure');
+    assert.deepEqual(data.callsTo('workflowRuns'), [
+      [REPO, { limit: 10, forceRefresh: false, status: 'failure' }],
+    ]);
+  });
+
+  it('shows only failed runs if configured', async () => {
+    const { data, target } = setup({ ...CONFIG, branch: 'dev', status: 'failure' });
+    await settle();
+    assert.deepEqual(data.callsTo('workflowRuns'), [
+      [REPO, { limit: 10, forceRefresh: false, branch: 'dev', status: 'failure' }],
+    ]);
+    assert.equal(statusFilter(target).value, 'failure');
+    assert.equal(
+      allRunsLink(target),
+      'https://github.com/octo/repo/actions?query=branch%3Adev%20is%3Afailure',
+    );
+    assert.ok(target.textContent?.includes('No failed runs'));
+    assert.ok(target.textContent?.includes('There are no failed workflow runs on dev.'));
+  });
+
+  it('explains an empty failed runs list without a branch', async () => {
+    const { target } = setup({ ...CONFIG, status: 'failure' });
+    await settle();
+    assert.ok(target.textContent?.includes('This repository has no failed workflow runs.'));
+    assert.equal(allRunsLink(target), 'https://github.com/octo/repo/actions?query=is%3Afailure');
+  });
+
+  it('changes the status filter, saves it and reloads', async () => {
+    const { data, ctx, target } = setup({ ...CONFIG, branch: 'dev' });
+    await settle();
+    assert.equal(statusFilter(target).value, 'all');
+    assert.deepEqual(
+      [...statusFilter(target).options].map((option) => option.textContent),
+      ['All runs', 'Failed runs'],
+    );
+    data.handle('workflowRuns', () =>
+      runsResult([workflowRun(4, { conclusion: 'failure', branch: 'dev' })]),
+    );
+    chooseStatus(target, 'failure');
+    assert.deepEqual(ctx.saved, [{ ...CONFIG, branch: 'dev', status: 'failure' }]);
+    assert.equal(
+      allRunsLink(target),
+      'https://github.com/octo/repo/actions?query=branch%3Adev%20is%3Afailure',
+    );
+    assert.ok(target.querySelector('.ghx-state--loading'));
+    await settle();
+    assert.deepEqual(rowIds(target), ['4']);
+    assert.deepEqual(data.callsTo('workflowRuns').at(-1), [
+      REPO,
+      { limit: 10, forceRefresh: false, branch: 'dev', status: 'failure' },
+    ]);
+
+    chooseStatus(target, 'all');
+    assert.deepEqual(ctx.saved.at(-1), { ...CONFIG, branch: 'dev', status: 'all' });
+    assert.equal(allRunsLink(target), 'https://github.com/octo/repo/actions?query=branch%3Adev');
+    assert.deepEqual(data.callsTo('workflowRuns').at(-1), [
+      REPO,
+      { limit: 10, forceRefresh: false, branch: 'dev' },
+    ]);
+  });
+
+  it('keeps the status filter when the branch changes', async () => {
+    const { data, ctx, target } = setup({ ...CONFIG, status: 'failure' });
+    data.handle('branches', async () => dataResult([{ name: 'dev', protected: false }]));
+    const branch = target.querySelector<HTMLSelectElement>('.ghx-actions-runs__branch');
+    assert.ok(branch);
+    branch.dispatchEvent(new Event('focus'));
+    await settle();
+    branch.value = 'dev';
+    branch.dispatchEvent(new Event('change'));
+    assert.deepEqual(ctx.saved, [{ ...CONFIG, branch: 'dev', status: 'failure' }]);
+    assert.deepEqual(data.callsTo('workflowRuns').at(-1), [
+      REPO,
+      { limit: 10, forceRefresh: false, branch: 'dev', status: 'failure' },
+    ]);
+  });
+
+  it('falls back to all runs for unknown status values', async () => {
+    const { ctx, target } = setup({ ...CONFIG, status: 'failure' });
+    await settle();
+    const odd = document.createElement('option');
+    odd.value = 'success';
+    statusFilter(target).append(odd);
+    chooseStatus(target, 'success');
+    assert.equal(ctx.saved.at(-1)?.status, 'all');
   });
 
   it('shows an empty state without runs', async () => {
@@ -422,6 +532,33 @@ describe('mountRunsView', () => {
       timers.env.isVisible = () => false;
       timer.callback();
       assert.equal(data.callsTo('workflowRuns').length, calls);
+    });
+
+    it('does not poll a list of failed, completed runs', async () => {
+      const { data, timers } = setup({ ...CONFIG, status: 'failure' });
+      data.handle('workflowRuns', () => runsResult([workflowRun(1, { conclusion: 'failure' })]));
+      await settle();
+      assert.equal(timers.pending().length, 0);
+    });
+
+    it('cancels the poll on a filter change and polls active runs with the filter', async () => {
+      const { data, ctx, target, timers } = setup();
+      data.handle('workflowRuns', () =>
+        runsResult([workflowRun(1, { status: 'in_progress', conclusion: null })]),
+      );
+      ctx.refresh('interval');
+      await settle();
+      assert.equal(timers.pending().length, 1);
+
+      chooseStatus(target, 'failure');
+      assert.equal(timers.pending().length, 0);
+      await settle();
+      assert.equal(timers.pending().length, 1);
+      timers.fire();
+      assert.deepEqual(data.callsTo('workflowRuns').at(-1), [
+        REPO,
+        { limit: 10, forceRefresh: false, status: 'failure' },
+      ]);
     });
 
     it('does not poll for waiting runs or while hidden', async () => {

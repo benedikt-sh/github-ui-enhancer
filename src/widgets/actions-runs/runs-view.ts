@@ -4,7 +4,7 @@ import type { ApiErrorInfo } from '../../shared/errors.ts';
 import type { RepoRef, WorkflowRunItem, WorkflowRunStatus } from '../../shared/types.ts';
 import type { Dispose, WidgetContext } from '../../shared/widget.ts';
 import { appendChildren, h, safeUrl } from '../../ui/dom.ts';
-import { notice } from '../../ui/forms.ts';
+import { notice, select } from '../../ui/forms.ts';
 import { icon } from '../../ui/octicons.ts';
 import { itemList, repoLink } from '../../ui/row.ts';
 import { emptyState, errorState, isTokenError, loadingState } from '../../ui/states.ts';
@@ -12,7 +12,7 @@ import { formatAbsoluteTime, formatRelativeTime } from '../../ui/time.ts';
 import { workflowRunRow } from '../../ui/workflow-run-row.ts';
 import { branchSelect } from './branch-select.ts';
 import type { ActionsRunsConfig } from './config.ts';
-import { runsPageUrl } from './config.ts';
+import { parseRunStatusFilter, RUN_STATUS_FILTER_OPTIONS, runsPageUrl } from './config.ts';
 import { partialErrorNotice } from './partial-errors.ts';
 import { repoPicker } from './repo-picker.ts';
 
@@ -44,6 +44,27 @@ export function isActiveRun(run: Pick<WorkflowRunItem, 'status'>): boolean {
 interface LoadOptions {
   readonly forceRefresh: boolean;
   readonly showLoading: boolean;
+}
+
+function emptyRunsState(config: ActionsRunsConfig): HTMLElement {
+  if (config.status === 'failure') {
+    return emptyState({
+      icon: 'workflow',
+      title: 'No failed runs',
+      description:
+        config.branch === null
+          ? 'This repository has no failed workflow runs.'
+          : `There are no failed workflow runs on ${config.branch}.`,
+    });
+  }
+  return emptyState({
+    icon: 'workflow',
+    title: 'No workflow runs',
+    description:
+      config.branch === null
+        ? 'This repository has no workflow runs yet.'
+        : `There are no workflow runs on ${config.branch}.`,
+  });
 }
 
 function errorTitle(errors: readonly ApiErrorInfo[]): string {
@@ -151,14 +172,7 @@ export function mountRunsView(
               runs.map((run) => workflowRunRow(run, { now: env.now() })),
               { label: 'Workflow runs', className: 'ghx-actions-runs__list' },
             )
-          : emptyState({
-              icon: 'workflow',
-              title: 'No workflow runs',
-              description:
-                config.branch === null
-                  ? 'This repository has no workflow runs yet.'
-                  : `There are no workflow runs on ${config.branch}.`,
-            }),
+          : emptyRunsState(config),
       ]);
     }
     renderFooter(repo, result);
@@ -183,6 +197,7 @@ export function mountRunsView(
         limit: config.limit,
         forceRefresh: options.forceRefresh,
         ...(config.branch === null ? {} : { branch: config.branch }),
+        ...(config.status === 'all' ? {} : { status: config.status }),
       })
       .then(
         (result) => {
@@ -207,6 +222,11 @@ export function mountRunsView(
   }
 
   const showRuns = (repo: RepoRef): void => {
+    const applyFilter = (next: ActionsRunsConfig): void => {
+      save(next);
+      renderFooter(repo, null);
+      load({ forceRefresh: false, showLoading: true });
+    };
     const branches = branchSelect({
       data: context.data,
       repo,
@@ -215,11 +235,14 @@ export function mountRunsView(
       lazy: true,
       ariaLabel: 'Branch',
       className: 'ghx-actions-runs__branch',
-      onChange: (branch) => {
-        save({ ...config, branch });
-        renderFooter(repo, null);
-        load({ forceRefresh: false, showLoading: true });
-      },
+      onChange: (branch) => applyFilter({ ...config, branch }),
+    });
+    const statusFilter = select({
+      options: RUN_STATUS_FILTER_OPTIONS,
+      value: config.status,
+      ariaLabel: 'Runs',
+      className: 'ghx-actions-runs__status-filter',
+      onChange: (value) => applyFilter({ ...config, status: parseRunStatusFilter(value) }),
     });
     content = h('div', { className: 'ghx-actions-runs__content' });
     footer = h('div', { className: 'ghx-actions-runs__footer' });
@@ -231,9 +254,14 @@ export function mountRunsView(
         repoLink(repo),
         h(
           'span',
-          { className: 'ghx-actions-runs__branch-picker' },
-          icon('git-branch'),
-          branches.element,
+          { className: 'ghx-actions-runs__filters' },
+          h(
+            'span',
+            { className: 'ghx-actions-runs__branch-picker' },
+            icon('git-branch'),
+            branches.element,
+          ),
+          statusFilter,
         ),
       ),
       content,

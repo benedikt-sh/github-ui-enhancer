@@ -9,21 +9,15 @@ import {
   DEFAULT_RUN_LIMIT,
   generatedTitle,
   isRunLimit,
-  isRunStatusFilter,
+  parseRunStatusFilter,
   RUN_LIMITS,
-  RUN_STATUS_FILTER_LABELS,
-  RUN_STATUS_FILTERS,
+  RUN_STATUS_FILTER_OPTIONS,
 } from './config.ts';
-import type { RunStatusFilter } from './config.ts';
 import { isSameRepo, repoPicker } from './repo-picker.ts';
 
 export interface ConfigFormEnvironment {
   /** Epoch milliseconds, for the recency ranking of the repo search. */
   now(): number;
-}
-
-function parseStatus(value: string): RunStatusFilter {
-  return isRunStatusFilter(value) ? value : 'all';
 }
 
 export function renderActionsRunsConfig(
@@ -54,13 +48,10 @@ export function renderActionsRunsConfig(
   });
   const statusSelect = select({
     name: 'status',
-    options: RUN_STATUS_FILTERS.map((filter) => ({
-      value: filter,
-      label: RUN_STATUS_FILTER_LABELS[filter],
-    })),
+    options: RUN_STATUS_FILTER_OPTIONS,
     value: initial.status,
     onChange: (value) => {
-      status = parseStatus(value);
+      status = parseRunStatusFilter(value);
       updateSelection();
     },
   });
