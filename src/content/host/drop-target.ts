@@ -13,15 +13,14 @@ export interface Box {
 }
 
 export interface DropCandidate {
-  readonly id: string;
   readonly box: Box;
 }
 
 /** `x` means the item shares its row with another column, so before/after is left/right. */
 export type DropAxis = 'x' | 'y';
 
-export interface DropTarget {
-  readonly id: string;
+export interface DropTarget<C extends DropCandidate> {
+  readonly candidate: C;
   readonly side: DropSide;
   readonly axis: DropAxis;
 }
@@ -47,21 +46,21 @@ function sideOn(axis: DropAxis, point: Point, box: Box): DropSide {
  * layout order, including the dragged one. The item under the pointer wins, otherwise the
  * nearest one. Pointers above or below all items drop at the start or the end.
  */
-export function findDropTarget(
+export function findDropTarget<C extends DropCandidate>(
   point: Point,
-  candidates: readonly DropCandidate[],
+  candidates: readonly C[],
   gridWidth: number,
-): DropTarget | null {
+): DropTarget<C> | null {
   const first = candidates[0];
   const last = candidates.at(-1);
   if (first === undefined || last === undefined) {
     return null;
   }
   if (point.y < Math.min(...candidates.map((candidate) => candidate.box.top))) {
-    return { id: first.id, side: 'before', axis: 'y' };
+    return { candidate: first, side: 'before', axis: 'y' };
   }
   if (point.y > Math.max(...candidates.map((candidate) => candidate.box.bottom))) {
-    return { id: last.id, side: 'after', axis: 'y' };
+    return { candidate: last, side: 'after', axis: 'y' };
   }
   // Items in the pointer's row win, so an empty cell next to an item still targets that item.
   const row = candidates.filter(({ box }) => box.top <= point.y && point.y <= box.bottom);
@@ -75,7 +74,7 @@ export function findDropTarget(
     }
   }
   const axis = nearest.box.right - nearest.box.left < gridWidth * COLUMN_SHARE ? 'x' : 'y';
-  return { id: nearest.id, side: sideOn(axis, point, nearest.box), axis };
+  return { candidate: nearest, side: sideOn(axis, point, nearest.box), axis };
 }
 
 export const AUTO_SCROLL_EDGE = 48;

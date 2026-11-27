@@ -7,7 +7,22 @@ import {
   autoScrollStep,
   findDropTarget,
 } from './drop-target.ts';
-import type { Box, DropCandidate, DropTarget } from './drop-target.ts';
+import type { Box, DropCandidate } from './drop-target.ts';
+
+interface Item extends DropCandidate {
+  readonly id: string;
+}
+
+interface Hit {
+  readonly id: string;
+  readonly side: string;
+  readonly axis: string;
+}
+
+function hitAt(x: number, y: number, items: readonly Item[], width: number): Hit | null {
+  const target = findDropTarget({ x, y }, items, width);
+  return target && { id: target.candidate.id, side: target.side, axis: target.axis };
+}
 
 const box = (left: number, top: number, width: number, height: number): Box => ({
   left,
@@ -22,14 +37,14 @@ const box = (left: number, top: number, width: number, height: number): Box => (
  *   c (full)                 y 120-220
  *   d (half)                 y 240-340
  */
-const grid: DropCandidate[] = [
+const grid: Item[] = [
   { id: 'a', box: box(0, 0, 490, 100) },
   { id: 'b', box: box(510, 0, 490, 100) },
   { id: 'c', box: box(0, 120, 1000, 100) },
   { id: 'd', box: box(0, 240, 490, 100) },
 ];
 
-const at = (x: number, y: number): DropTarget | null => findDropTarget({ x, y }, grid, 1000);
+const at = (x: number, y: number): Hit | null => hitAt(x, y, grid, 1000);
 
 describe('findDropTarget', () => {
   it('returns null without candidates', () => {
@@ -61,16 +76,16 @@ describe('findDropTarget', () => {
   });
 
   it('stacks half width items vertically in a single column', () => {
-    const column: DropCandidate[] = [
+    const column: Item[] = [
       { id: 'a', box: box(0, 0, 600, 100) },
       { id: 'b', box: box(0, 120, 600, 100) },
     ];
-    assert.deepEqual(findDropTarget({ x: 10, y: 130 }, column, 600), {
+    assert.deepEqual(hitAt(10, 130, column, 600), {
       id: 'b',
       side: 'before',
       axis: 'y',
     });
-    assert.deepEqual(findDropTarget({ x: 590, y: 90 }, column, 600), {
+    assert.deepEqual(hitAt(590, 90, column, 600), {
       id: 'a',
       side: 'after',
       axis: 'y',
