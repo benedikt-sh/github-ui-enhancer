@@ -473,8 +473,8 @@ describe('createTokenRegistry data layer access', () => {
     const { registry } = await populated();
 
     assert.deepEqual(await registry.activeTokens(), [
-      { id: 'id-1', secret: ALICE, owner: 'alice' },
-      { id: 'id-2', secret: ALICE_ORG, owner: 'Acme' },
+      { id: 'id-1', secret: ALICE, owner: 'alice', login: 'alice' },
+      { id: 'id-2', secret: ALICE_ORG, owner: 'Acme', login: 'Alice' },
     ]);
   });
 
@@ -483,7 +483,7 @@ describe('createTokenRegistry data layer access', () => {
     probe.owners.set(ALICE, []);
     await registry.add(ALICE);
 
-    assert.deepEqual(await registry.activeTokens(), [{ id: 'id-1', secret: ALICE, owner: null }]);
+    assert.deepEqual(await registry.activeTokens(), [{ id: 'id-1', secret: ALICE, owner: null, login: 'alice' }]);
     assert.equal(await registry.tokenForOwner('alice'), null);
   });
 
@@ -506,6 +506,7 @@ describe('createTokenRegistry data layer access', () => {
       id: 'id-2',
       secret: ALICE_ORG,
       owner: 'Acme',
+      login: 'Alice',
     });
   });
 

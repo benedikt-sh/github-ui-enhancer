@@ -21,6 +21,8 @@ export interface ActiveToken {
   readonly secret: string;
   /** Null when the owner could not be detected and was not set manually. */
   readonly owner: string | null;
+  /** GitHub user the token belongs to; equals `owner` for a personal token. */
+  readonly login: string | null;
 }
 
 export interface TokenRegistry {
@@ -145,6 +147,7 @@ export function createTokenRegistry(options: TokenRegistryOptions): TokenRegistr
     id: entry.id,
     secret: entry.secret,
     owner: entry.owner,
+    login: entry.login,
   });
 
   const usable = (entries: readonly StoredToken[]): StoredToken[] => {
