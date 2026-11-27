@@ -1,0 +1,74 @@
+/* Pull request list widget. Builds on the UI kit in src/ui/styles.css. */
+
+.ghx-pr-list[aria-busy='true'] .ghx-list {
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in;
+}
+
+.ghx-pr-list__errors {
+  border-bottom: 1px solid var(--borderColor-danger-muted, #ff818266);
+  background-color: var(--bgColor-danger-muted, #ffebe9);
+}
+
+/* The UI kit error state is centered and roomy, above a list it should be a compact banner. */
+.ghx-pr-list__errors .ghx-state {
+  align-items: flex-start;
+  gap: var(--base-size-4, 4px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  text-align: left;
+}
+
+.ghx-pr-list__errors .ghx-state__icon {
+  display: none;
+}
+
+.ghx-pr-list__errors .ghx-state__actions {
+  justify-content: flex-start;
+}
+
+.ghx-pr-list .ghx-state__description code,
+.ghx-pr-list-form code {
+  padding: 0 var(--base-size-4, 4px);
+  border-radius: var(--borderRadius-small, 3px);
+  background-color: var(--bgColor-neutral-muted, #818b981f);
+  font-family: var(--fontStack-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 85%;
+  overflow-wrap: anywhere;
+}
+
+.ghx-pr-list__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--base-size-8, 8px);
+  padding: var(--base-size-8, 8px) var(--base-size-16, 16px);
+  border-top: 1px solid var(--borderColor-muted, #d1d9e0b3);
+  font-size: var(--text-body-size-small, 12px);
+}
+
+.ghx-pr-list__stale {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-size-4, 4px);
+  margin-right: auto;
+  color: var(--fgColor-attention, #9a6700);
+}
+
+.ghx-pr-list-form {
+  padding: var(--base-size-16, 16px);
+}
+
+.ghx-pr-list-form__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--base-size-8, 8px);
+  margin: calc(-1 * var(--base-size-8, 8px)) 0 var(--base-size-16, 16px);
+}
+
+.ghx-pr-list-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--base-size-8, 8px);
+  margin-top: var(--base-size-16, 16px);
+}
