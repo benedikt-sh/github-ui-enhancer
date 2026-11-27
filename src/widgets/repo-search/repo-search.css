@@ -1,10 +1,10 @@
-/* Repository search, rendered full width above all other widgets without a frame. */
+/* Repository search, rendered inside the widget frame of the host. */
 
 .ghx-repo-search {
   display: flex;
   flex-direction: column;
   gap: var(--base-size-8, 8px);
-  margin-bottom: var(--base-size-16, 16px);
+  padding: var(--base-size-16, 16px);
 }
 
 .ghx-repo-search__bar {

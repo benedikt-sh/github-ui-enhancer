@@ -11,14 +11,11 @@ function sequentialIds(): () => string {
 }
 
 describe('DASHBOARD_WIDGETS', () => {
-  it('registers every widget type once with exactly one singleton', () => {
+  it('registers every widget type once, all of them optional', () => {
     const types = DASHBOARD_WIDGETS.map((definition) => definition.type);
 
     assert.deepEqual(types, ['repo-search', 'pr-list', 'issue-list', 'actions-runs']);
-    assert.deepEqual(
-      DASHBOARD_WIDGETS.filter((definition) => definition.singleton).map((d) => d.type),
-      ['repo-search'],
-    );
+    assert.equal(DASHBOARD_WIDGETS.some((definition) => definition.singleton), false);
   });
 });
 

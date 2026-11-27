@@ -22,7 +22,7 @@ export function createRepoSearchWidget(
     type: 'repo-search',
     title: TITLE,
     description: 'Search repositories across all your organizations.',
-    singleton: true,
+    singleton: false,
     presets: [],
     defaultConfig: defaultRepoSearchConfig,
     parseConfig: parseRepoSearchConfig,

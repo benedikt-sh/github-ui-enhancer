@@ -194,10 +194,10 @@ function withIndex(
 }
 
 describe('repoSearchWidget definition', () => {
-  it('is a singleton without presets and settings form', () => {
+  it('is an optional widget without presets and settings form', () => {
     assert.equal(repoSearchWidget.type, 'repo-search');
     assert.equal(repoSearchWidget.title, 'Repository search');
-    assert.equal(repoSearchWidget.singleton, true);
+    assert.equal(repoSearchWidget.singleton, false);
     assert.deepEqual(repoSearchWidget.presets, []);
     assert.equal(repoSearchWidget.renderConfig, null);
     assert.ok(repoSearchWidget.description.length > 0);
