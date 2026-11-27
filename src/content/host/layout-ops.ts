@@ -30,7 +30,7 @@ function updateInstance(
 ): DashboardLayout {
   return {
     version: 1,
-    instances: layout.instances.map((instance) => (instance.id === id ? update(instance) : instance)),
+    instances: layout.instances.map((entry) => (entry.id === id ? update(entry) : entry)),
   };
 }
 
