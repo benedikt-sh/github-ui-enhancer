@@ -1,3 +1,4 @@
+import { type ApiErrorInfo, isApiErrorInfo } from '../../shared/errors.ts';
 import { isNonEmptyString, isOneOf, isRecord, isString } from '../../shared/guards.ts';
 import type {
   Actor,
@@ -190,13 +191,18 @@ export function isBranchItem(value: unknown): value is BranchItem {
   return isRecord(value) && isNonEmptyString(value['name']) && isBoolean(value['protected']);
 }
 
-/** A list fetched with a page cap, remembering whether the cap cut it short. */
-export interface CappedList<T> {
+/**
+ * What one token contributed to a list, as cached. `errors` keeps problems that did not stop
+ * the request, e.g. a page cap or hidden SAML protected results, so cache hits report them too.
+ */
+export interface CachedList<T> {
   readonly items: readonly T[];
-  readonly truncated: boolean;
+  readonly errors: readonly ApiErrorInfo[];
 }
 
-export function isCappedListOf<T>(guard: Guard<T>): Guard<CappedList<T>> {
-  return (value): value is CappedList<T> =>
-    isRecord(value) && isArrayOf(guard)(value['items']) && isBoolean(value['truncated']);
+export function isCachedListOf<T>(guard: Guard<T>): Guard<CachedList<T>> {
+  return (value): value is CachedList<T> =>
+    isRecord(value) &&
+    isArrayOf(guard)(value['items']) &&
+    isArrayOf(isApiErrorInfo)(value['errors']);
 }

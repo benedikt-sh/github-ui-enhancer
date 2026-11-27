@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { isRecord } from '../../shared/guards.ts';
 import {
   mapIssueNode,
   mapPullRequestNode,
@@ -16,7 +17,7 @@ import {
 import {
   isArrayOf,
   isBranchItem,
-  isCappedListOf,
+  isCachedListOf,
   isIssueItem,
   isPullRequestItem,
   isRepoSummary,
@@ -24,7 +25,7 @@ import {
 } from './values.ts';
 
 function without(value: unknown, key: string): Record<string, unknown> {
-  const copy: Record<string, unknown> = { ...(value as Record<string, unknown>) };
+  const copy: Record<string, unknown> = isRecord(value) ? { ...value } : {};
   delete copy[key];
   return copy;
 }
@@ -71,10 +72,11 @@ describe('cached value guards', () => {
     assert.ok(isArrayOf(isBranchItem)([]));
     assert.equal(isArrayOf(isBranchItem)({}), false);
     assert.equal(isArrayOf(isBranchItem)([{}]), false);
-    const isCapped = isCappedListOf(isRepoSummary);
-    assert.ok(isCapped({ items: [repo], truncated: false }));
-    assert.equal(isCapped({ items: [repo] }), false);
-    assert.equal(isCapped({ items: [{}], truncated: true }), false);
-    assert.equal(isCapped([]), false);
+    const isCached = isCachedListOf(isRepoSummary);
+    assert.ok(isCached({ items: [repo], errors: [{ kind: 'internal', message: 'x' }] }));
+    assert.equal(isCached({ items: [repo] }), false);
+    assert.equal(isCached({ items: [{}], errors: [] }), false);
+    assert.equal(isCached({ items: [], errors: [{ kind: 'odd' }] }), false);
+    assert.equal(isCached([]), false);
   });
 });
