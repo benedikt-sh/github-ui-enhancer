@@ -30,7 +30,8 @@ export function createActionsRunsWidget(
   return {
     type: ACTIONS_RUNS_TYPE,
     title: 'Actions runs',
-    description: 'Recent GitHub Actions workflow runs of a repository, optionally for one branch.',
+    description:
+      'Recent GitHub Actions runs of a repository, optionally for one branch or failed runs only.',
     singleton: false,
     presets: [],
     defaultConfig: defaultActionsRunsConfig,

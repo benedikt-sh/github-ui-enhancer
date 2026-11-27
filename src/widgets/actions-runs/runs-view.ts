@@ -123,7 +123,7 @@ export function mountRunsView(
         'a',
         {
           className: 'ghx-link ghx-actions-runs__all',
-          href: safeUrl(runsPageUrl(repo, config.branch)),
+          href: safeUrl(runsPageUrl(repo, config.branch, config.status)),
         },
         'View all runs',
       ),

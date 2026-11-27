@@ -115,17 +115,31 @@ describe('renderActionsRunsConfig', () => {
     assert.equal(title.placeholder, 'Actions: octo/api @ api-dev');
     title.value = '  Deploys  ';
     selectByName(target, 'limit').value = '20';
+    const status = selectByName(target, 'status');
+    assert.equal(status.value, 'all');
+    status.value = 'failure';
+    status.dispatchEvent(new Event('change'));
+    assert.equal(title.placeholder, 'Actions: octo/api @ api-dev (failed)');
     submit(target);
-    assert.deepEqual(submitted, [{ repo: REPO, branch: 'api-dev', limit: 20, title: 'Deploys' }]);
+    assert.deepEqual(submitted, [
+      { repo: REPO, branch: 'api-dev', limit: 20, status: 'failure', title: 'Deploys' },
+    ]);
   });
 
   it('starts from the existing config and resets the branch on a repo change', async () => {
-    const config = { repo: REPO, branch: 'main', limit: 5, title: null } as const;
+    const config = {
+      repo: REPO,
+      branch: 'main',
+      limit: 5,
+      status: 'failure',
+      title: null,
+    } as const;
     const { target, submitted } = setup(config);
     await settle();
     assert.ok(target.textContent?.includes('Selected: octo/api'));
     assert.equal(branchControl(target).value, 'main');
     assert.equal(selectByName(target, 'limit').value, '5');
+    assert.equal(selectByName(target, 'status').value, 'failure');
 
     buttonByText(target, 'octo/api').click();
     assert.equal(branchControl(target).value, 'main');
@@ -134,7 +148,13 @@ describe('renderActionsRunsConfig', () => {
     assert.equal(branchControl(target).value, '');
     submit(target);
     assert.deepEqual(submitted, [
-      { repo: { owner: 'octo', name: 'web' }, branch: null, limit: 5, title: null },
+      {
+        repo: { owner: 'octo', name: 'web' },
+        branch: null,
+        limit: 5,
+        status: 'failure',
+        title: null,
+      },
     ]);
   });
 
@@ -144,6 +164,17 @@ describe('renderActionsRunsConfig', () => {
     selectByName(target, 'limit').value = '7';
     submit(target);
     assert.equal(submitted[0]?.limit, 10);
+  });
+
+  it('falls back to all runs for unknown status values', async () => {
+    const config = { ...defaultActionsRunsConfig(), repo: REPO, status: 'failure' } as const;
+    const { target, submitted } = setup(config);
+    await settle();
+    const status = selectByName(target, 'status');
+    status.value = 'success';
+    status.dispatchEvent(new Event('change'));
+    submit(target);
+    assert.equal(submitted[0]?.status, 'all');
   });
 
   it('cancels and disposes', () => {

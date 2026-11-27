@@ -5,12 +5,25 @@ import { button, formField, select, textInput } from '../../ui/forms.ts';
 import { icon } from '../../ui/octicons.ts';
 import { ALL_BRANCHES_LABEL, branchSelect } from './branch-select.ts';
 import type { ActionsRunsConfig } from './config.ts';
-import { DEFAULT_RUN_LIMIT, generatedTitle, isRunLimit, RUN_LIMITS } from './config.ts';
+import {
+  DEFAULT_RUN_LIMIT,
+  generatedTitle,
+  isRunLimit,
+  isRunStatusFilter,
+  RUN_LIMITS,
+  RUN_STATUS_FILTER_LABELS,
+  RUN_STATUS_FILTERS,
+} from './config.ts';
+import type { RunStatusFilter } from './config.ts';
 import { isSameRepo, repoPicker } from './repo-picker.ts';
 
 export interface ConfigFormEnvironment {
   /** Epoch milliseconds, for the recency ranking of the repo search. */
   now(): number;
+}
+
+function parseStatus(value: string): RunStatusFilter {
+  return isRunStatusFilter(value) ? value : 'all';
 }
 
 export function renderActionsRunsConfig(
@@ -21,6 +34,7 @@ export function renderActionsRunsConfig(
   const initial = context.config;
   let repo = initial.repo;
   let branch = initial.branch;
+  let status = initial.status;
 
   const inputId = uniqueId('ghx-actions-runs-repo');
   const errorId = `${inputId}-error`;
@@ -38,11 +52,23 @@ export function renderActionsRunsConfig(
     options: RUN_LIMITS.map((limit) => ({ value: String(limit), label: `${limit} runs` })),
     value: String(initial.limit),
   });
+  const statusSelect = select({
+    name: 'status',
+    options: RUN_STATUS_FILTERS.map((filter) => ({
+      value: filter,
+      label: RUN_STATUS_FILTER_LABELS[filter],
+    })),
+    value: initial.status,
+    onChange: (value) => {
+      status = parseStatus(value);
+      updateSelection();
+    },
+  });
 
   const updateSelection = (): void => {
     selection.textContent =
       repo === null ? 'No repository selected.' : `Selected: ${repoFullName(repo)}`;
-    titleInput.placeholder = generatedTitle({ repo, branch });
+    titleInput.placeholder = generatedTitle({ repo, branch, status });
   };
 
   const setRepoError = (visible: boolean): void => {
@@ -133,6 +159,7 @@ export function renderActionsRunsConfig(
             repo,
             branch,
             limit: isRunLimit(limit) ? limit : DEFAULT_RUN_LIMIT,
+            status,
             title: title === '' ? null : title,
           });
         },
@@ -140,6 +167,7 @@ export function renderActionsRunsConfig(
     },
     repoField,
     branchSlot,
+    formField({ label: 'Show', control: statusSelect }),
     formField({ label: 'Number of runs', control: limitSelect }),
     formField({ label: 'Title', control: titleInput, hint: 'Leave empty to use the default.' }),
     h(

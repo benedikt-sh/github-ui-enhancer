@@ -48,6 +48,7 @@ describe('actionsRunsWidget', () => {
       repo: null,
       branch: null,
       limit: 10,
+      status: 'all',
       title: null,
     });
   });
@@ -58,11 +59,16 @@ describe('actionsRunsWidget', () => {
       erased.instanceTitle({ repo: 'octo/repo', branch: 'main' }),
       'Actions: octo/repo @ main',
     );
+    assert.equal(
+      erased.instanceTitle({ repo: 'octo/repo', branch: 'main', status: 'failure' }),
+      'Actions: octo/repo @ main (failed)',
+    );
     assert.equal(erased.instanceTitle('garbage'), 'Actions runs');
     assert.deepEqual(erased.parseConfig({ repo: REPO, limit: 5 }), {
       repo: REPO,
       branch: null,
       limit: 5,
+      status: 'all',
       title: null,
     });
   });
