@@ -14,7 +14,13 @@ describe('DASHBOARD_WIDGETS', () => {
   it('registers every widget type once, all of them optional', () => {
     const types = DASHBOARD_WIDGETS.map((definition) => definition.type);
 
-    assert.deepEqual(types, ['repo-search', 'pr-list', 'issue-list', 'actions-runs']);
+    assert.deepEqual(types, [
+      'repo-search',
+      'pr-list',
+      'issue-list',
+      'actions-runs',
+      'recent-repos',
+    ]);
     assert.equal(DASHBOARD_WIDGETS.some((definition) => definition.singleton), false);
   });
 });
@@ -30,7 +36,8 @@ describe('createDefaultLayout', () => {
         { id: 'id-2', type: 'pr-list', width: 'half' },
         { id: 'id-3', type: 'issue-list', width: 'half' },
         { id: 'id-4', type: 'pr-list', width: 'half' },
-        { id: 'id-5', type: 'issue-list', width: 'full' },
+        { id: 'id-5', type: 'issue-list', width: 'half' },
+        { id: 'id-6', type: 'recent-repos', width: 'half' },
       ],
     );
     const titles = layout.instances.map((instance) => {
@@ -43,6 +50,7 @@ describe('createDefaultLayout', () => {
       'Assigned to me',
       'Created by me',
       'Watched issues',
+      'Recently changed',
     ]);
   });
 

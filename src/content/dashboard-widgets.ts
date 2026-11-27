@@ -5,6 +5,7 @@ import type { ErasedWidgetDefinition } from '../shared/widget.ts';
 import { actionsRunsWidget } from '../widgets/actions-runs/actions-runs-widget.ts';
 import { issueListWidget } from '../widgets/issue-list/issue-list-widget.ts';
 import { pullRequestListWidget } from '../widgets/pr-list/pr-list-widget.ts';
+import { recentReposWidget } from '../widgets/recent-repos/recent-repos-widget.ts';
 import { repoSearchWidget } from '../widgets/repo-search/repo-search-widget.ts';
 
 export const DASHBOARD_WIDGETS: readonly ErasedWidgetDefinition[] = [
@@ -12,6 +13,7 @@ export const DASHBOARD_WIDGETS: readonly ErasedWidgetDefinition[] = [
   eraseWidget(pullRequestListWidget),
   eraseWidget(issueListWidget),
   eraseWidget(actionsRunsWidget),
+  eraseWidget(recentReposWidget),
 ];
 
 interface DefaultEntry {
@@ -26,7 +28,8 @@ const DEFAULT_ENTRIES: readonly DefaultEntry[] = [
   { type: pullRequestListWidget.type, preset: 'assigned', width: 'half' },
   { type: issueListWidget.type, preset: 'assigned', width: 'half' },
   { type: pullRequestListWidget.type, preset: 'created', width: 'half' },
-  { type: issueListWidget.type, preset: 'watched', width: 'full' },
+  { type: issueListWidget.type, preset: 'watched', width: 'half' },
+  { type: recentReposWidget.type, preset: 'recently-changed', width: 'half' },
 ];
 
 export function createDefaultLayout(
