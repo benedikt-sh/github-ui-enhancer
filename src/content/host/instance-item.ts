@@ -5,12 +5,17 @@ import { h } from '../../ui/dom.ts';
 import { iconButton } from '../../ui/forms.ts';
 import { dropdownMenu } from '../../ui/menu.ts';
 import type { MenuItem } from '../../ui/menu.ts';
+import { icon } from '../../ui/octicons.ts';
 import { emptyState } from '../../ui/states.ts';
 import { widgetFrame } from '../../ui/widget-frame.ts';
+import type { WidgetFrame } from '../../ui/widget-frame.ts';
 import { createWidgetSlot } from './widget-slot.ts';
 
 export interface HostItem {
   readonly root: HTMLElement;
+  readonly title: string;
+  /** False while the config form is open, dragging would move a half filled form. */
+  readonly draggable: boolean;
   /** Applies width and position, the config is owned by the item once created. */
   update(instance: WidgetInstance, index: number, count: number): void;
   refresh(reason: RefreshReason): void;
@@ -33,6 +38,9 @@ export interface InstanceItemOptions {
 
 export const ITEM_CLASS = 'ghx-host-item';
 export const FULL_WIDTH_CLASS = 'ghx-host-item--full';
+/** Marks the frame header as drag handle. */
+export const HANDLE_CLASS = 'ghx-host-item__handle';
+export const GRABBER_CLASS = 'ghx-host-item__grabber';
 
 const LABELS = {
   refresh: 'Refresh',
@@ -42,6 +50,15 @@ const LABELS = {
   down: 'Move down',
   remove: 'Remove',
 } as const;
+
+function makeHandle(frame: WidgetFrame): void {
+  frame.header.classList.add(HANDLE_CLASS);
+  frame.header.prepend(icon('grabber', { className: GRABBER_CLASS }));
+}
+
+function titleOf(frame: WidgetFrame): string {
+  return frame.header.querySelector('.ghx-widget__title-text')?.textContent ?? '';
+}
 
 function applyInstance(root: HTMLElement, instance: WidgetInstance): void {
   root.dataset['instanceId'] = instance.id;
@@ -99,10 +116,18 @@ function createKnownItem(
     actions: [menu.root],
     className: ITEM_CLASS,
   });
-  const { root } = slot.frame;
+  const { frame } = slot;
+  const { root } = frame;
+  makeHandle(frame);
 
   return {
     root,
+    get title() {
+      return titleOf(frame);
+    },
+    get draggable() {
+      return slot.mode !== 'config';
+    },
     update(instance, index, count) {
       applyInstance(root, instance);
       upButton.disabled = index === 0;
@@ -133,8 +158,11 @@ function createUnknownItem(options: InstanceItemOptions): HostItem {
       description: `The widget type "${type}" is not supported by this version of the extension.`,
     }),
   });
+  makeHandle(frame);
   return {
     root: frame.root,
+    title: titleOf(frame),
+    draggable: true,
     update: (instance) => applyInstance(frame.root, instance),
     refresh: () => undefined,
     dispose: () => undefined,

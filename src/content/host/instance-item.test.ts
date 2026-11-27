@@ -7,7 +7,13 @@ import { createFakeWidgetData } from '../../../test/fakes/widget-data.ts';
 import type { WidgetInstance } from '../../shared/layout.ts';
 import { createFakeWidget } from './host.fixture.ts';
 import type { FakeWidget } from './host.fixture.ts';
-import { createInstanceItem, FULL_WIDTH_CLASS, ITEM_CLASS } from './instance-item.ts';
+import {
+  createInstanceItem,
+  FULL_WIDTH_CLASS,
+  GRABBER_CLASS,
+  HANDLE_CLASS,
+  ITEM_CLASS,
+} from './instance-item.ts';
 import type { HostItem, InstanceItemOptions } from './instance-item.ts';
 
 let dom: DomEnvironment;
@@ -152,5 +158,36 @@ describe('createInstanceItem', () => {
     item.root.querySelector<HTMLButtonElement>('button[aria-label="Remove widget"]')?.click();
     assert.deepEqual(calls, ['remove i1']);
     item.dispose();
+  });
+
+  it('marks the header as drag handle with a grabber', () => {
+    for (const definition of [createFakeWidget(), undefined]) {
+      const { item } = setup(definition);
+      const header = item.root.querySelector('header');
+      assert.ok(header?.classList.contains(HANDLE_CLASS));
+      const grabber = header?.firstElementChild;
+      assert.ok(grabber?.classList.contains(GRABBER_CLASS));
+      assert.equal(grabber?.getAttribute('aria-hidden'), 'true');
+    }
+  });
+
+  it('exposes the title and blocks dragging while the config form is open', () => {
+    const widget = createFakeWidget({ configurable: true });
+    const { item } = setup(widget);
+    assert.equal(item.title, 'Fake list: default');
+    assert.equal(item.draggable, true);
+    menuButton(item, 'Configure').click();
+    assert.equal(item.draggable, false);
+    widget.forms[0]?.context.submit({ name: 'renamed' });
+    assert.equal(item.draggable, true);
+    assert.equal(item.title, 'Fake list: renamed');
+    item.root.querySelector('.ghx-widget__title-text')?.remove();
+    assert.equal(item.title, '');
+  });
+
+  it('lets unknown widgets be dragged', () => {
+    const { item } = setup(undefined);
+    assert.equal(item.title, 'Unknown widget');
+    assert.equal(item.draggable, true);
   });
 });
