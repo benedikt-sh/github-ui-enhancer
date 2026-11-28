@@ -42,7 +42,12 @@ function setup(
 describe('createRepoStore', () => {
   it('starts empty and loads repositories and recent activity on the first refresh', async () => {
     const { store, data } = setup();
-    assert.deepEqual(store.snapshot(), { index: null, loadError: null, loading: false, recent: [] });
+    assert.deepEqual(store.snapshot(), {
+      index: null,
+      loadError: null,
+      loading: false,
+      recent: [],
+    });
 
     store.refresh();
     assert.equal(store.snapshot().loading, true);
@@ -78,7 +83,7 @@ describe('createRepoStore', () => {
     assert.equal(data.callsTo('recentRepositories').length, 1);
   });
 
-  it('refreshes in the background once the interval passed and keeps the old data meanwhile', async () => {
+  it('refreshes in the background after the interval and keeps the old data', async () => {
     const { store, data, clock } = setup();
     store.refresh();
     await flush();

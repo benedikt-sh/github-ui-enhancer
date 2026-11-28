@@ -37,7 +37,7 @@ function names(snap: RepoStoreSnapshot, query: string): string[] {
 const TOKEN_ERROR: ApiErrorInfo = { kind: 'unauthorized', message: 'bad', owner: 'globex' };
 
 describe('buildResults', () => {
-  it('lists the most recently pushed repositories for an empty query, archived ones left out', () => {
+  it('lists the most recently pushed repositories without archived ones for no query', () => {
     assert.deepEqual(names(snapshot(REPOS), ''), [
       'acme/billing-api',
       'acme/web',
