@@ -44,7 +44,12 @@ describe('attachPinDrag', () => {
       item.getBoundingClientRect = () => ({ left: index * 100, width: 80 }) as DOMRect;
     });
     moves = [];
-    detach = attachPinDrag({ document, list, onMove: (from, to) => moves.push([from, to]) });
+    detach = attachPinDrag({
+      document,
+      list,
+      onMove: (from, to) => moves.push([from, to]),
+      defer: (run) => run(),
+    });
   });
 
   function pointer(type: string, x: number, target: EventTarget = document, button = 0): void {
@@ -138,6 +143,7 @@ describe('attachPinDrag', () => {
       onMove: (from, to) => moved.push([from, to]),
       axis: 'y',
       classes: { list: 'l', item: 'i', dropBefore: 'b', dropAfter: 'a' },
+      defer: (run) => run(),
     });
     const press = (type: string, y: number, target: EventTarget = document): void => {
       const init = { clientX: 0, clientY: y, button: 0, bubbles: true };

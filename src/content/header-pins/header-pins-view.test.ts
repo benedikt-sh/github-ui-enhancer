@@ -296,7 +296,7 @@ describe('createHeaderPinsView', () => {
     view.update(state([repo('octo', 'alpha'), repo('octo', 'beta')]));
   });
 
-  it('reorders pins by dragging them along the bar', () => {
+  it('reorders pins by dragging them along the bar', async () => {
     const { view, moved } = setup();
     view.update(
       state([repo('octo', 'alpha'), repo('octo', 'beta'), repo('octo', 'gamma')], {
@@ -326,15 +326,17 @@ describe('createHeaderPinsView', () => {
     assert.equal(items[0]?.classList.contains('ghx-header-pins__item--dragging'), true);
     assert.equal(items[2]?.classList.contains('ghx-header-pins__item--drop-after'), true);
     pointer('pointerup', 250);
-    assert.deepEqual(moved, [['alpha', 2]]);
-
+    // The click following the release still hits the old link and must not open it.
     const click = new MouseEvent('click', { bubbles: true, cancelable: true });
     alpha.dispatchEvent(click);
     assert.equal(click.defaultPrevented, true);
+    assert.deepEqual(moved, []);
+    await flush();
+    assert.deepEqual(moved, [['alpha', 2]]);
     view.dispose();
   });
 
-  it('reorders pins by dragging the entries in the panel', () => {
+  it('reorders pins by dragging the entries in the panel', async () => {
     const { view, moved } = setup();
     view.update(state([repo('octo', 'alpha'), repo('octo', 'beta')]));
     view.open();
@@ -352,6 +354,7 @@ describe('createHeaderPinsView', () => {
     press('pointermove', 0);
     assert.ok(entries[0]?.classList.contains('ghx-header-pins__entry--drop-before'));
     press('pointerup', 0);
+    await flush();
 
     assert.deepEqual(moved, [['beta', 0]]);
     view.dispose();

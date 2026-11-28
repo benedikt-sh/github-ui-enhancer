@@ -7,6 +7,12 @@ export const ITEM_DRAGGING_CLASS = 'ghx-header-pins__item--dragging';
 export const DROP_BEFORE_CLASS = 'ghx-header-pins__item--drop-before';
 export const DROP_AFTER_CLASS = 'ghx-header-pins__item--drop-after';
 
+/**
+ * How long after a drag the following click is swallowed. Browsers send it right after the
+ * release, the window only guards against clicks that never come.
+ */
+export const SWALLOW_CLICK_MS = 400;
+
 /** Controls inside an item keep their own behavior and never start a drag. */
 const INTERACTIVE = 'button, input, select, textarea';
 
@@ -37,6 +43,11 @@ export interface PinDragOptions {
   /** `x` for the header bar (default), `y` for the vertical list in the panel. */
   readonly axis?: 'x' | 'y';
   readonly classes?: PinDragClasses;
+  /**
+   * Runs the move after the click that follows the release, defaults to the next task. Moving
+   * right away re-renders the pins, and a link removed that way still navigates when clicked.
+   */
+  readonly defer?: (run: () => void) => void;
 }
 
 interface Gesture {
@@ -53,9 +64,9 @@ export function attachPinDrag(options: PinDragOptions): () => void {
   const { document, list } = options;
   const axis = options.axis ?? 'x';
   const classes = options.classes ?? BAR_CLASSES;
+  const defer = options.defer ?? ((run: () => void) => void setTimeout(run, 0));
   let gesture: Gesture | null = null;
-  /** Set after a drag: the release over a pin link would otherwise open that repository. */
-  let swallowClick = false;
+  let swallowTimer: ReturnType<typeof setTimeout> | null = null;
 
   function pinnedItems(): HTMLElement[] {
     return [...list.querySelectorAll<HTMLElement>(ITEM_SELECTOR)];
@@ -70,7 +81,7 @@ export function attachPinDrag(options: PinDragOptions): () => void {
   function onPointerDown(event: PointerEvent): void {
     const target = event.target instanceof Element ? event.target : null;
     const item = target?.closest(ITEM_SELECTOR) ?? null;
-    swallowClick = false;
+    stopSwallowing();
     if (
       event.button !== 0 ||
       !(item instanceof HTMLElement) ||
@@ -130,7 +141,8 @@ export function attachPinDrag(options: PinDragOptions): () => void {
     const finished = gesture;
     end();
     if (finished?.dragging === true && finished.to !== finished.from) {
-      options.onMove(finished.from, finished.to);
+      const { from, to } = finished;
+      defer(() => options.onMove(from, to));
     }
   }
 
@@ -155,22 +167,36 @@ export function attachPinDrag(options: PinDragOptions): () => void {
     list.classList.remove(classes.list);
     finished?.item.classList.remove(classes.item);
     clearIndicators();
-    swallowClick = finished?.dragging === true;
-  }
-
-  function onClick(event: Event): void {
-    if (swallowClick) {
-      swallowClick = false;
-      event.preventDefault();
-      event.stopPropagation();
+    if (finished?.dragging === true) {
+      startSwallowing();
     }
   }
 
+  /** The release after a drag would otherwise open the repository below the pointer. */
+  function startSwallowing(): void {
+    stopSwallowing();
+    document.addEventListener('click', onClick, true);
+    swallowTimer = setTimeout(stopSwallowing, SWALLOW_CLICK_MS);
+  }
+
+  function stopSwallowing(): void {
+    document.removeEventListener('click', onClick, true);
+    if (swallowTimer !== null) {
+      clearTimeout(swallowTimer);
+      swallowTimer = null;
+    }
+  }
+
+  function onClick(event: Event): void {
+    stopSwallowing();
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   list.addEventListener('pointerdown', onPointerDown);
-  list.addEventListener('click', onClick, true);
   return () => {
     list.removeEventListener('pointerdown', onPointerDown);
-    list.removeEventListener('click', onClick, true);
     end();
+    stopSwallowing();
   };
 }
