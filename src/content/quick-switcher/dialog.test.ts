@@ -345,7 +345,22 @@ describe('openQuickSwitcherDialog', () => {
     assert.equal(document.activeElement?.id, 'outside');
   });
 
-  it('keeps the active entry on update while it is listed', () => {
+  it('keeps the first entry active on update until the user picks another', () => {
+    const { dialog, setResults } = setup();
+    setResults(results([entry('acme/new'), ...ENTRIES]));
+    dialog.update();
+    assert.deepEqual(selected(), ['acme/new']);
+  });
+
+  it('forgets the picked entry when the query changes', () => {
+    const { setResults } = setup();
+    key(input(), 'ArrowDown');
+    setResults(results([entry('acme/one'), entry('acme/two')]));
+    type('o');
+    assert.deepEqual(selected(), ['acme/one']);
+  });
+
+  it('keeps the picked entry on update while it is listed', () => {
     const { dialog, setResults, queries } = setup();
     key(input(), 'ArrowDown');
     setResults(results([entry('acme/new'), ...ENTRIES]));

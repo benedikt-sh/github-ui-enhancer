@@ -131,7 +131,9 @@ function indexState(index: LoadedRepoIndex): ResultsState | null {
 
 /** What the switcher shows for `query` with the data loaded so far. */
 export function buildResults(snapshot: RepoStoreSnapshot, query: string): Results {
-  const { index, loadError } = snapshot;
+  const { index } = snapshot;
+  // A retry is running, the error of the previous attempt is no longer the news.
+  const loadError = snapshot.loading ? null : snapshot.loadError;
   const trimmed = query.trim();
   if (index === null) {
     const state: ResultsState =

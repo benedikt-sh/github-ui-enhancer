@@ -165,6 +165,12 @@ describe('buildResults', () => {
     });
   });
 
+  it('shows the loading state again while a failed load is retried', () => {
+    const error: ApiErrorInfo = { kind: 'network', message: 'offline' };
+    const snap = snapshot(null, { loadError: error, loading: true });
+    assert.deepEqual(buildResults(snap, '').state, { kind: 'loading' });
+  });
+
   it('shows the missing token state', () => {
     const loadError: ApiErrorInfo = { kind: 'no_tokens', message: 'none' };
     assert.deepEqual(buildResults(snapshot(null, { loadError }), '').state, {

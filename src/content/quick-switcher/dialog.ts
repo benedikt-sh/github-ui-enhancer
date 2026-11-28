@@ -63,6 +63,8 @@ export function openQuickSwitcherDialog(options: QuickSwitcherDialogOptions): Qu
   const previousFocus = document.activeElement;
   let entries: readonly SwitcherEntry[] = [];
   let activeIndex = -1;
+  /** Set once the user moved the selection, until the query changes. */
+  let userSelected = false;
   let closed = false;
 
   const listId = uniqueId('ghx-quick-switcher-list');
@@ -80,7 +82,12 @@ export function openQuickSwitcherDialog(options: QuickSwitcherDialogOptions): Qu
     'aria-autocomplete': 'list',
     'aria-controls': listId,
     'aria-expanded': 'false',
-    on: { input: () => render(false) },
+    on: {
+      input: () => {
+        userSelected = false;
+        render();
+      },
+    },
   });
   const list = h('ul', {
     className: 'ghx-quick-switcher__list',
@@ -144,12 +151,13 @@ export function openQuickSwitcherDialog(options: QuickSwitcherDialogOptions): Qu
   }
   (document.body ?? document.documentElement).append(root);
   document.addEventListener('focusin', onFocusIn);
-  render(false);
+  render();
   input.focus();
 
-  function render(keepActive: boolean): void {
+  /** The first entry is active, unless the user picked one that is still listed. */
+  function render(): void {
     const hadFocus = dialog.contains(document.activeElement);
-    const activeKey = keepActive ? entries[activeIndex]?.key : undefined;
+    const activeKey = userSelected ? entries[activeIndex]?.key : undefined;
     const results = options.results(input.value);
     entries = results.entries;
     const kept = entries.findIndex((entry) => entry.key === activeKey);
@@ -242,6 +250,7 @@ export function openQuickSwitcherDialog(options: QuickSwitcherDialogOptions): Qu
 
   function setActive(position: number, scroll: boolean): void {
     activeIndex = position;
+    userSelected = true;
     const optionElements = list.querySelectorAll('[role="option"]');
     optionElements.forEach((option, index) => {
       option.setAttribute('aria-selected', String(index === position));
@@ -362,7 +371,7 @@ export function openQuickSwitcherDialog(options: QuickSwitcherDialogOptions): Qu
     },
     update() {
       if (!closed) {
-        render(true);
+        render();
       }
     },
     close,
