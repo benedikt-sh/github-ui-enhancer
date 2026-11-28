@@ -9,6 +9,7 @@ function restEvent(overrides: Record<string, unknown> = {}): Record<string, unkn
     id: '1',
     type: 'PushEvent',
     created_at: '2026-11-27T10:00:00Z',
+    actor: { id: 7, login: 'alice' },
     repo: { id: 1, name: 'acme/api', url: 'https://api.github.com/repos/acme/api' },
     payload: { ref: 'refs/heads/main' },
     ...overrides,
@@ -17,13 +18,14 @@ function restEvent(overrides: Record<string, unknown> = {}): Record<string, unkn
 
 function event(id: string, repo: string, kind: RecentEvent['kind'], at: string): RecentEvent {
   const [owner = '', name = ''] = repo.split('/');
-  return { id, repo: { owner, name }, kind, branch: null, createdAt: at };
+  return { id, actor: 'alice', repo: { owner, name }, kind, branch: null, createdAt: at };
 }
 
 describe('mapEvent', () => {
   it('maps a push with its branch', () => {
     assert.deepEqual(mapEvent(restEvent()), {
       id: '1',
+      actor: 'alice',
       repo: { owner: 'acme', name: 'api' },
       kind: 'push',
       branch: 'main',
@@ -72,6 +74,11 @@ describe('mapEvent', () => {
     assert.equal(noPayload?.branch, null);
   });
 
+  it('keeps events without a usable actor', () => {
+    assert.equal(mapEvent(restEvent({ actor: null }))?.actor, null);
+    assert.equal(mapEvent(restEvent({ actor: { login: '' } }))?.actor, null);
+  });
+
   it('drops entries without id, time or a valid repository', () => {
     for (const value of [
       null,
@@ -91,6 +98,9 @@ describe('isRecentEvent', () => {
     assert.equal(isRecentEvent(mapped), true);
     assert.equal(isRecentEvent({ ...mapped, kind: 'party' }), false);
     assert.equal(isRecentEvent({ ...mapped, branch: 1 }), false);
+    assert.equal(isRecentEvent({ ...mapped, actor: null }), true);
+    assert.equal(isRecentEvent({ ...mapped, actor: undefined }), false);
+    assert.equal(isRecentEvent({ ...mapped, actor: '' }), false);
     assert.equal(isRecentEvent('event'), false);
   });
 });

@@ -539,7 +539,8 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
       }
       const limit = clampLimit(recentOptions?.limit);
       const parts = await fanOut<RecentEvent>(tokens, (token) => ({
-        key: cacheKey('events', token.id),
+        // Version 2 added the actor of each event.
+        key: cacheKey('events-v2', token.id),
         bucket: 'core',
         ttl: EVENTS_TTL_MS,
         validate: isCachedListOf(isRecentEvent),

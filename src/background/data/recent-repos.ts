@@ -4,9 +4,11 @@ import { REPO_ACTIVITY_KINDS } from '../../shared/types.ts';
 import type { RecentRepoItem, RepoActivityKind, RepoRef } from '../../shared/types.ts';
 import { isRepoRef } from './values.ts';
 
-/** One event of the user, reduced to what the recent repositories need. */
+/** One event, reduced to what the recent repositories need. */
 export interface RecentEvent {
   readonly id: string;
+  /** Login of the user who caused the event, null if GitHub sent none. */
+  readonly actor: string | null;
   readonly repo: RepoRef;
   readonly kind: RepoActivityKind;
   readonly branch: string | null;
@@ -42,25 +44,35 @@ function eventBranch(kind: RepoActivityKind, payload: unknown): string | null {
   return null;
 }
 
-/** Maps an entry of `GET /users/{login}/events`, null for anything unusable. */
+function actorLogin(actor: unknown): string | null {
+  const login = isRecord(actor) ? actor['login'] : undefined;
+  return isNonEmptyString(login) ? login : null;
+}
+
+/**
+ * Maps an entry of `GET /users/{login}/events` or `GET /repos/{owner}/{repo}/events`, null for
+ * anything unusable.
+ */
 export function mapEvent(value: unknown): RecentEvent | null {
   if (!isRecord(value)) {
     return null;
   }
-  const { id, type, created_at: createdAt, repo, payload } = value;
+  const { id, type, created_at: createdAt, actor, repo, payload } = value;
   const name = isRecord(repo) ? repo['name'] : undefined;
   const ref = isString(name) ? parseRepoFullName(name) : null;
   if (!isNonEmptyString(id) || !isString(createdAt) || ref === null) {
     return null;
   }
   const kind = (isString(type) ? EVENT_KINDS[type] : undefined) ?? 'other';
-  return { id, repo: ref, kind, branch: eventBranch(kind, payload), createdAt };
+  const branch = eventBranch(kind, payload);
+  return { id, actor: actorLogin(actor), repo: ref, kind, branch, createdAt };
 }
 
 export function isRecentEvent(value: unknown): value is RecentEvent {
   return (
     isRecord(value) &&
     isNonEmptyString(value['id']) &&
+    (value['actor'] === null || isNonEmptyString(value['actor'])) &&
     isRepoRef(value['repo']) &&
     isOneOf(REPO_ACTIVITY_KINDS, value['kind']) &&
     (value['branch'] === null || isString(value['branch'])) &&
