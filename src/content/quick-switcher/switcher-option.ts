@@ -95,7 +95,9 @@ export function switcherOption(options: SwitcherOptionOptions): HTMLLIElement {
         href: entry.url,
         dataset: { key: entry.key },
       },
-      visibilityIcon(entry.visibility),
+      entry.kind === 'page'
+        ? h('span', { className: 'ghx-quick-switcher__visibility' }, icon('home'))
+        : visibilityIcon(entry.visibility),
       h(
         'span',
         { className: 'ghx-quick-switcher__main' },

@@ -6,7 +6,7 @@ import type { ApiErrorInfo } from '../../shared/errors.ts';
 import type { RecentRepoItem, RepoSummary } from '../../shared/types.ts';
 import { NOW, recentItem, repo, REPOS } from './quick-switcher.fixture.ts';
 import type { RepoStoreSnapshot } from './repo-store.ts';
-import { buildResults, MAX_RESULTS } from './results.ts';
+import { buildResults, MAX_RESULTS, withPages } from './results.ts';
 
 function snapshot(
   repos: readonly RepoSummary[] | null,
@@ -70,6 +70,7 @@ describe('buildResults', () => {
     });
     const [first, second] = buildResults(snap, '').entries;
     assert.deepEqual(first, {
+      kind: 'repo',
       key: 'other/thing',
       fullName: 'other/thing',
       url: 'https://github.com/other/thing',
@@ -189,3 +190,36 @@ describe('buildResults', () => {
     assert.deepEqual(buildResults(snapshot([]), '').state, { kind: 'no-repos' });
   });
 });
+
+describe('withPages', () => {
+  const base = buildResults(snapshot(REPOS), '');
+
+  it('puts the dashboard first for an empty query and caps the list', () => {
+    const results = withPages(base, '  ');
+    assert.equal(results.entries[0]?.fullName, 'Dashboard');
+    assert.equal(results.entries[0]?.kind, 'page');
+    assert.equal(results.entries[0]?.url, 'https://github.com/');
+    assert.ok(results.entries.length <= MAX_RESULTS);
+  });
+
+  it('finds the dashboard by the start of its terms and highlights its title', () => {
+    const typed = withPages(buildResults(snapshot(REPOS), 'Dash'), 'Dash');
+    assert.equal(typed.entries[0]?.fullName, 'Dashboard');
+    assert.deepEqual(typed.entries[0]?.nameHighlights, [[0, 4]]);
+    assert.equal(typed.state, null);
+
+    const home = withPages(buildResults(snapshot(REPOS), 'home'), 'home');
+    assert.equal(home.entries[0]?.fullName, 'Dashboard');
+    assert.deepEqual(home.entries[0]?.nameHighlights, []);
+  });
+
+  it('leaves other queries and loading states alone', () => {
+    const other = buildResults(snapshot(REPOS), 'web');
+    assert.equal(withPages(other, 'web'), other);
+
+    const loading = withPages(buildResults(snapshot(null), ''), '');
+    assert.equal(loading.entries[0]?.fullName, 'Dashboard');
+    assert.equal(loading.state?.kind, 'loading');
+  });
+});
+

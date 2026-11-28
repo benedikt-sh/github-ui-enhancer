@@ -4,7 +4,7 @@ import { openQuickSwitcherDialog } from './dialog.ts';
 import type { OpenUrl, QuickSwitcherDialog } from './dialog.ts';
 import { createDoubleShiftDetector } from './double-shift.ts';
 import { createRepoStore } from './repo-store.ts';
-import { buildResults } from './results.ts';
+import { buildResults, withPages } from './results.ts';
 
 export type { OpenUrl } from './dialog.ts';
 
@@ -70,7 +70,7 @@ export function createQuickSwitcher(options: QuickSwitcherOptions): Toggleable {
     const instance = openQuickSwitcherDialog({
       document,
       window,
-      results: (query) => buildResults(store.snapshot(), query),
+      results: (query) => withPages(buildResults(store.snapshot(), query), query),
       openUrl,
       onRetry: () => store.refresh(true),
       openOptions,

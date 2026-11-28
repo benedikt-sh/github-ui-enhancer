@@ -145,6 +145,7 @@ describe('createQuickSwitcher', () => {
     await flush();
     assert.equal(stateText(), '');
     assert.deepEqual(optionNames(), [
+      'Dashboard',
       'acme/web',
       'acme/billing-api',
       'globex/billing-ui',
@@ -257,7 +258,7 @@ describe('createQuickSwitcher', () => {
     keydown('Escape', {}, input());
 
     doubleShift(clock);
-    assert.equal(optionNames().length, 4);
+    assert.equal(optionNames().length, 5);
     assert.equal(stateText(), '');
     await flush();
     assert.equal(data.callsTo('repoIndex').length, 1);
@@ -315,6 +316,7 @@ describe('createQuickSwitcher', () => {
     switcher.start();
     doubleShift(clock);
     await flush();
+    keydown('ArrowDown', {}, input());
     keydown('Enter', { ctrlKey: true }, input());
     assert.deepEqual(win.opened, [
       ['https://github.com/acme/web', '_blank', 'noopener,noreferrer'],
@@ -328,6 +330,7 @@ describe('createQuickSwitcher', () => {
     switcher.start();
     doubleShift(clock);
     await flush();
+    keydown('ArrowDown', {}, input());
     keydown('Enter', { metaKey: true }, input());
     assert.deepEqual(opened, [['https://github.com/acme/web', true]]);
   });
@@ -348,7 +351,7 @@ describe('createQuickSwitcher', () => {
     assert.match(stateText(), /Loading repositories/);
     assert.equal(document.activeElement, input());
     await flush();
-    assert.equal(optionNames().length, 4);
+    assert.equal(optionNames().length, 5);
     assert.deepEqual(data.callsTo('repoIndex').at(-1), [{ forceRefresh: true }]);
   });
 

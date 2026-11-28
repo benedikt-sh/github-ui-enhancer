@@ -20,6 +20,7 @@ after(async () => {
 
 function entry(fullName: string, overrides: Partial<SwitcherEntry> = {}): SwitcherEntry {
   return {
+    kind: 'repo',
     key: fullName.toLowerCase(),
     fullName,
     url: `https://github.com/${fullName}`,

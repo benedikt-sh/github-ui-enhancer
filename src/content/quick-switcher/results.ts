@@ -8,6 +8,8 @@ import type { LoadedRepoIndex, RepoStoreSnapshot } from './repo-store.ts';
 export const MAX_RESULTS = 10;
 
 export interface SwitcherEntry {
+  /** Pages are fixed destinations such as the dashboard, shown above the repositories. */
+  readonly kind: 'repo' | 'page';
   /** Lower-cased full name, unique within one result list. */
   readonly key: string;
   readonly fullName: string;
@@ -45,6 +47,7 @@ function repoKey(owner: string, name: string): string {
 
 function fromSummary(repo: RepoSummary, recent: boolean): SwitcherEntry {
   return {
+    kind: 'repo',
     key: repoKey(repo.owner, repo.name),
     fullName: repo.fullName,
     url: safeUrl(repo.url) ?? repoUrl(repo),
@@ -88,6 +91,7 @@ function fromRecent(item: RecentRepoItem, index: LoadedRepoIndex | null): Switch
     return fromSummary(known, true);
   }
   return {
+    kind: 'repo',
     key,
     fullName: `${item.repo.owner}/${item.repo.name}`,
     url: safeUrl(item.url) ?? repoUrl(item.repo),
@@ -163,3 +167,41 @@ export function buildResults(snapshot: RepoStoreSnapshot, query: string): Result
     partialErrors: index.errors,
   };
 }
+
+const DASHBOARD_TITLE = 'Dashboard';
+/** Words that find the dashboard besides its title. */
+const DASHBOARD_TERMS = ['dashboard', 'home', 'start page'];
+
+const DASHBOARD: SwitcherEntry = {
+  kind: 'page',
+  key: 'page:dashboard',
+  fullName: DASHBOARD_TITLE,
+  url: 'https://github.com/',
+  description: 'Your GitHub start page',
+  visibility: null,
+  archived: false,
+  fork: false,
+  nameHighlights: [],
+  descriptionHighlights: [],
+  recent: false,
+};
+
+/**
+ * Puts the dashboard above the repositories for an empty query and for queries that are the
+ * start of one of its terms, e.g. `da` or `home`.
+ */
+export function withPages(results: Results, query: string): Results {
+  const needle = query.trim().toLowerCase();
+  if (needle !== '' && !DASHBOARD_TERMS.some((term) => term.startsWith(needle))) {
+    return results;
+  }
+  const highlight = DASHBOARD_TITLE.toLowerCase().startsWith(needle) && needle !== '';
+  const entry: SwitcherEntry = {
+    ...DASHBOARD,
+    nameHighlights: highlight ? [[0, needle.length]] : [],
+  };
+  const entries = [entry, ...results.entries].slice(0, MAX_RESULTS);
+  const state = results.state?.kind === 'no-match' ? null : results.state;
+  return { ...results, entries, state };
+}
+
