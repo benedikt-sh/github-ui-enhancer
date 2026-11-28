@@ -98,3 +98,38 @@ export function renderFileList(
 ): void {
   document.body.innerHTML = `<main>${fileListMarkup(entries, options)}</main>`;
 }
+
+export interface FileTreeFixtureEntry {
+  /** Full path inside the repository, also the item id. */
+  readonly path: string;
+  readonly kind?: 'file' | 'directory';
+}
+
+/**
+ * GitHub's file tree next to file and directory pages, modeled on github.com/nodejs/node in
+ * November 2026 (Primer TreeView, class name hashes shortened).
+ */
+export function fileTreeMarkup(entries: readonly FileTreeFixtureEntry[]): string {
+  const items = entries.map((entry) => {
+    const kind = entry.kind ?? 'file';
+    const name = entry.path.split('/').pop() ?? entry.path;
+    const icon =
+      kind === 'directory'
+        ? `<div class="PRIVATE_TreeView-directory-icon">${octicon('directory')}</div>`
+        : octicon('file');
+    return `
+      <li id="${entry.path}-item" role="treeitem" aria-level="${entry.path.split('/').length}"
+        class="PRIVATE_TreeView-item"${kind === 'directory' ? ' aria-expanded="false"' : ''}>
+        <div class="PRIVATE_TreeView-item-container">
+          <div class="PRIVATE_TreeView-item-content">
+            <div class="PRIVATE_TreeView-item-visual prc-TreeView-TreeViewItemVisual-naWzj">${icon}</div>
+            <span class="PRIVATE_TreeView-item-content-text"><span>${name}</span></span>
+          </div>
+        </div>
+      </li>`;
+  });
+  return `
+    <nav aria-label="File Tree Navigation">
+      <ul role="tree" aria-label="Files">${items.join('')}</ul>
+    </nav>`;
+}

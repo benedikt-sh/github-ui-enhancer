@@ -213,14 +213,17 @@ const NON_REPOSITORY_OWNERS = new Set([
   'users',
 ]);
 
-/** The repository home page (`/owner/repo`) and directory pages (`/owner/repo/tree/ref/...`). */
+/**
+ * Pages with a file list or the file tree: the repository home page (`/owner/repo`), directory
+ * pages (`/owner/repo/tree/ref/...`) and file pages (`/owner/repo/blob/ref/...`).
+ */
 export function isRepositoryCodePath(pathname: string): boolean {
   const segments = pathname.split('/').filter((segment) => segment !== '');
   const [owner, , view] = segments;
   if (owner === undefined || NON_REPOSITORY_OWNERS.has(owner.toLowerCase())) {
     return false;
   }
-  return segments.length === 2 || (segments.length >= 4 && view === 'tree');
+  return segments.length === 2 || (segments.length >= 4 && (view === 'tree' || view === 'blob'));
 }
 
 /**
@@ -238,7 +241,20 @@ export const FILE_LIST_CELL_SELECTORS = [
 /** GitHub's generic file icon. Folders, submodules and symlinks use other `octicon-file-*`. */
 export const FILE_LIST_FILE_ICON = 'svg.octicon-file';
 
-const FILE_LIST_CELL = FILE_LIST_CELL_SELECTORS.join(', ');
+/**
+ * Icon containers of the file tree next to directory and file pages
+ * (`nav[aria-label="File Tree Navigation"] ul[role="tree"]`). Each `li[role="treeitem"]` has the
+ * file path plus `-item` as id; files show the octicon as direct child of the visual container,
+ * folders wrap theirs in another element. The second selector survives renamed classes.
+ */
+export const FILE_TREE_CELL_SELECTORS = [
+  'nav[aria-label="File Tree Navigation"] [role="treeitem"] .PRIVATE_TreeView-item-visual',
+  '[role="tree"] [role="treeitem"] [class*="TreeViewItemVisual"]',
+] as const;
+
+const TREE_ITEM_ID_SUFFIX = '-item';
+
+const FILE_LIST_CELL = [...FILE_LIST_CELL_SELECTORS, ...FILE_TREE_CELL_SELECTORS].join(', ');
 const ELEMENT_NODE = 1;
 
 export interface FileListEntry {
@@ -248,9 +264,19 @@ export interface FileListEntry {
   readonly path: string;
 }
 
-/** Cells inside `root` and `root` itself, found by the first selector that matches any. */
+/**
+ * Cells of the file list and the file tree inside `root` (and `root` itself). Per view, the first
+ * selector that matches anything wins.
+ */
 export function findFileListCells(root: ParentNode): Element[] {
-  for (const selector of FILE_LIST_CELL_SELECTORS) {
+  return [
+    ...firstMatching(root, FILE_LIST_CELL_SELECTORS),
+    ...firstMatching(root, FILE_TREE_CELL_SELECTORS),
+  ];
+}
+
+function firstMatching(root: ParentNode, selectors: readonly string[]): Element[] {
+  for (const selector of selectors) {
     const cells = [...root.querySelectorAll(selector)];
     if (isElement(root) && root.matches(selector)) {
       cells.unshift(root);
@@ -271,6 +297,13 @@ export function fileListCellOf(node: Node): Element | null {
 /** `null` unless the cell shows a file with GitHub's generic icon and a link. */
 export function readFileListEntry(cell: Element): FileListEntry | null {
   const icon = [...cell.children].find((child) => child.matches(FILE_LIST_FILE_ICON));
+  const treeItem = cell.closest('[role="treeitem"]');
+  if (treeItem !== null) {
+    const id = treeItem.id;
+    return icon === undefined || !id.endsWith(TREE_ITEM_ID_SUFFIX)
+      ? null
+      : { icon, path: id.slice(0, -TREE_ITEM_ID_SUFFIX.length) };
+  }
   const href = cell.querySelector('a[href]')?.getAttribute('href') ?? null;
   if (icon === undefined || href === null) {
     return null;

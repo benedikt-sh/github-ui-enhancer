@@ -3,7 +3,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 
 import { installDom } from '../../../test/dom.ts';
 import type { DomEnvironment } from '../../../test/dom.ts';
-import { fileListRow, renderFileList } from './file-list.fixture.ts';
+import { fileListRow, fileTreeMarkup, renderFileList } from './file-list.fixture.ts';
 import {
   createFileIcons,
   createIcon,
@@ -198,7 +198,7 @@ describe('createFileIcons', () => {
     icons.start();
     assert.deepEqual(shown(), ['rust']);
 
-    dom.window.happyDOM.setURL(`${REPO}/blob/main/Cargo.toml`);
+    dom.window.happyDOM.setURL(`${REPO}/pulls`);
     document.body.append(document.createElement('div'));
     await nextMutation();
     assert.equal(untouched(), true);
@@ -222,6 +222,63 @@ describe('createFileIcons', () => {
     icons.start();
     assert.equal(untouched(), true);
     icons.stop();
+  });
+
+  it('replaces file icons in the file tree of file pages, including expanded folders', async () => {
+    dom.window.happyDOM.setURL(`${REPO}/blob/main/src/index.ts`);
+    document.body.innerHTML = fileTreeMarkup([
+      { path: 'src', kind: 'directory' },
+      { path: 'src/index.ts' },
+      { path: 'notes.unknown' },
+    ]);
+    const icons = createFileIcons({ document, window });
+    icons.start();
+
+    const tree = document.querySelector('[role="tree"]');
+    tree?.insertAdjacentHTML('beforeend', fileTreeMarkup([{ path: 'package.json' }]));
+    await nextMutation();
+
+    assert.deepEqual(
+      [...document.querySelectorAll(`[${ICON_ATTRIBUTE}]`)].map((icon) =>
+        icon.getAttribute(ICON_ATTRIBUTE),
+      ),
+      ['typescript', 'npm'],
+    );
+    icons.stop();
+    assert.equal(untouched(), true);
+  });
+
+  it('waits for the page to settle before changing anything', async () => {
+    renderFileList(document, [{ name: 'Cargo.toml' }]);
+    let settle = (): void => {};
+    const settled = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const icons = createFileIcons({ document, window, settled });
+    icons.start();
+    document.body.append(document.createElement('div'));
+    await nextMutation();
+    assert.equal(untouched(), true);
+
+    settle();
+    await nextMutation();
+    assert.deepEqual(shown(), ['rust']);
+
+    icons.stop();
+    icons.start();
+    await nextMutation();
+    assert.deepEqual(shown(), ['rust']);
+    icons.stop();
+  });
+
+  it('does nothing when stopped before the page settled', async () => {
+    renderFileList(document, [{ name: 'Cargo.toml' }]);
+    const icons = createFileIcons({ document, window, settled: Promise.resolve() });
+    icons.start();
+    icons.stop();
+    await nextMutation();
+
+    assert.equal(untouched(), true);
   });
 
   it('fails open on unknown markup and ignores unrelated changes', async () => {

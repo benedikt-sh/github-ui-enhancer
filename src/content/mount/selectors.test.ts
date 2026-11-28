@@ -3,7 +3,7 @@ import { after, before, describe, it } from 'node:test';
 
 import { installDom } from '../../../test/dom.ts';
 import type { DomEnvironment } from '../../../test/dom.ts';
-import { renderFileList } from '../file-icons/file-list.fixture.ts';
+import { fileTreeMarkup, renderFileList } from '../file-icons/file-list.fixture.ts';
 import { renderPage } from './github-page.fixture.ts';
 import {
   fileListCellOf,
@@ -315,17 +315,53 @@ describe('isRepositoryCodePath', () => {
     assert.equal(isRepositoryCodePath('/octo/repo/'), true);
     assert.equal(isRepositoryCodePath('/octo/repo/tree/main'), true);
     assert.equal(isRepositoryCodePath('/octo/repo/tree/feature/x/src'), true);
+    assert.equal(isRepositoryCodePath('/octo/repo/blob/main/a.ts'), true);
   });
 
   it('rejects other pages', () => {
     assert.equal(isRepositoryCodePath('/'), false);
     assert.equal(isRepositoryCodePath('/octo'), false);
-    assert.equal(isRepositoryCodePath('/octo/repo/blob/main/a.ts'), false);
     assert.equal(isRepositoryCodePath('/octo/repo/tree'), false);
     assert.equal(isRepositoryCodePath('/octo/repo/pulls'), false);
     assert.equal(isRepositoryCodePath('/orgs/octo'), false);
     assert.equal(isRepositoryCodePath('/settings/profile'), false);
     assert.equal(isRepositoryCodePath('/Marketplace/actions'), false);
+  });
+});
+
+describe('file tree', () => {
+  let dom: DomEnvironment;
+  before(() => {
+    dom = installDom();
+  });
+  after(() => dom.cleanup());
+
+  it('reads file paths from the tree item ids and skips folders', () => {
+    document.body.innerHTML = fileTreeMarkup([
+      { path: 'lib', kind: 'directory' },
+      { path: 'lib/internal/fs/dir.js' },
+    ]);
+
+    const cells = findFileListCells(document);
+    assert.equal(cells.length, 2);
+    assert.deepEqual(
+      cells.map((cell) => readFileListEntry(cell)?.path ?? null),
+      [null, 'lib/internal/fs/dir.js'],
+    );
+    const icon = cells[1]?.querySelector('svg');
+    assert.ok(icon);
+    assert.equal(fileListCellOf(icon), cells[1]);
+  });
+
+  it('finds tree visuals by the class fragment and ignores items without a path id', () => {
+    document.body.innerHTML = `
+      <ul role="tree"><li role="treeitem" id="odd"><div class="TreeViewItemVisual-x" id="cell">
+        <svg class="octicon octicon-file"></svg></div></li></ul>`;
+    const cell = document.getElementById('cell');
+    assert.ok(cell !== null);
+
+    assert.deepEqual(findFileListCells(document), [cell]);
+    assert.equal(readFileListEntry(cell), null);
   });
 });
 

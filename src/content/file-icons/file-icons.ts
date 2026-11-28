@@ -21,6 +21,11 @@ const ELEMENT_NODE = 1;
 export interface FileIconsOptions {
   readonly document: Document;
   readonly window: Pick<Window, 'location'> & Pick<typeof globalThis, 'MutationObserver'>;
+  /**
+   * Resolves once React has taken over GitHub's prerendered file list, see `whenPageSettled`.
+   * Changing the list earlier makes React redraw it. Without it the icons apply right away.
+   */
+  readonly settled?: Promise<void>;
 }
 
 /**
@@ -31,12 +36,16 @@ export function createFileIcons(options: FileIconsOptions): Toggleable {
   const { document, window } = options;
   let observer: MutationObserver | null = null;
   let replaced = false;
+  let ready = options.settled === undefined;
 
   function onCodePage(): boolean {
     return isRepositoryCodePath(window.location.pathname);
   }
 
   function handle(records: readonly MutationRecord[]): void {
+    if (!ready) {
+      return;
+    }
     if (!onCodePage()) {
       if (replaced) {
         restoreAll();
@@ -81,6 +90,12 @@ export function createFileIcons(options: FileIconsOptions): Toggleable {
     replaced = true;
   }
 
+  function scan(): void {
+    if (onCodePage()) {
+      findFileListCells(document).forEach(update);
+    }
+  }
+
   function restoreAll(): void {
     replaced = false;
     document.querySelectorAll(`.${ICON_CLASS}[${ICON_ATTRIBUTE}]`).forEach((icon) => icon.remove());
@@ -102,13 +117,21 @@ export function createFileIcons(options: FileIconsOptions): Toggleable {
         attributes: true,
         attributeFilter: ['href', 'class'],
       });
-      if (onCodePage()) {
-        findFileListCells(document).forEach(update);
+      if (ready) {
+        scan();
+      } else {
+        void options.settled?.then(() => {
+          if (observer !== null) {
+            ready = true;
+            scan();
+          }
+        });
       }
     },
     stop() {
       observer?.disconnect();
       observer = null;
+      ready = options.settled === undefined;
       restoreAll();
     },
   };
