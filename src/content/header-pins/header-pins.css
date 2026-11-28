@@ -255,3 +255,27 @@
   color: var(--fgColor-muted, #59636e);
   font-size: var(--text-body-size-small, 12px);
 }
+
+/* Reordering by drag: the pin being moved fades, an accent bar marks the drop position. */
+.ghx-header-pins__list--dragging,
+.ghx-header-pins__list--dragging .ghx-header-pins__link {
+  cursor: grabbing;
+}
+
+.ghx-header-pins__item--dragging {
+  opacity: 0.5;
+}
+
+.ghx-header-pins__item--drop-before {
+  box-shadow: -3px 0 0 var(--fgColor-accent, #0969da);
+}
+
+.ghx-header-pins__item--drop-after {
+  box-shadow: 3px 0 0 var(--fgColor-accent, #0969da);
+}
+
+.ghx-header-pins__item {
+  border-radius: var(--borderRadius-medium, 6px);
+  touch-action: pan-y;
+  user-select: none;
+}

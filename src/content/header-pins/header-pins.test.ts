@@ -341,7 +341,7 @@ describe('createHeaderPins', () => {
     const { pins, area, listeners } = setup(stored([repo('octo', 'alpha')], false));
     pins.start();
     await flush();
-    const unpin = element<HTMLButtonElement>('.ghx-header-pins__entry button');
+    const unpin = element<HTMLButtonElement>('.ghx-header-pins__entry button[aria-label^="Unpin"]');
 
     unpin.click();
     assert.deepEqual(linkNames(), []);
@@ -371,7 +371,7 @@ describe('createHeaderPins', () => {
     pins.start();
     await flush();
     const toggle = element<HTMLInputElement>('input[type="checkbox"]');
-    const unpin = element<HTMLButtonElement>('.ghx-header-pins__entry button');
+    const unpin = element<HTMLButtonElement>('.ghx-header-pins__entry button[aria-label^="Unpin"]');
     area.failWith(new Error('must not write'));
 
     toggle.dispatchEvent(new Event('change'));
@@ -389,7 +389,7 @@ describe('createHeaderPins', () => {
     await flush();
     area.failWith(new Error('quota'));
 
-    element<HTMLButtonElement>('.ghx-header-pins__entry button').click();
+    element<HTMLButtonElement>('.ghx-header-pins__entry button[aria-label^="Unpin"]').click();
     assert.deepEqual(linkNames(), []);
     await flush();
 
@@ -397,7 +397,7 @@ describe('createHeaderPins', () => {
     assert.equal(element('.ghx-header-pins__error').textContent, SAVE_ERROR);
 
     area.failWith(null);
-    element<HTMLButtonElement>('.ghx-header-pins__entry button').click();
+    element<HTMLButtonElement>('.ghx-header-pins__entry button[aria-label^="Unpin"]').click();
     assert.equal(element('.ghx-header-pins__error').hidden, true);
     await flush();
     pins.stop();
@@ -409,12 +409,12 @@ describe('createHeaderPins', () => {
     await flush();
     area.failWith(new Error('quota'));
 
-    element<HTMLButtonElement>('.ghx-header-pins__entry button').click();
-    element<HTMLButtonElement>('.ghx-header-pins__entry button').click();
+    element<HTMLButtonElement>('.ghx-header-pins__entry button[aria-label^="Unpin"]').click();
+    element<HTMLButtonElement>('.ghx-header-pins__entry button[aria-label^="Unpin"]').click();
     await flush();
     assert.deepEqual(linkNames(), ['pinned:octo/beta']);
 
-    element<HTMLButtonElement>('.ghx-header-pins__entry button').click();
+    element<HTMLButtonElement>('.ghx-header-pins__entry button[aria-label^="Unpin"]').click();
     pins.stop();
     await flush();
     assert.deepEqual(roots(), []);

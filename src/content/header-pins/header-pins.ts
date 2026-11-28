@@ -10,6 +10,7 @@ import {
   addPin,
   defaultPins,
   isPinned,
+  movePin,
   parsePins,
   parseRepo,
   removePin,
@@ -94,6 +95,7 @@ export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
       loadRepos: async () => (await data.repoIndex()).data,
       onAdd: (repo) => change((current) => addPin(current, repo)),
       onRemove: (repo) => change((current) => removePin(current, repo)),
+      onMove: (repo, index) => change((current) => movePin(current, repo, index)),
       onRecentChange: (value) => change((current) => setRecent(current, value)),
       now,
     });

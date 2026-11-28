@@ -4,7 +4,8 @@ import { h, safeUrl, uniqueId } from '../../ui/dom.ts';
 import { button, checkbox, iconButton } from '../../ui/forms.ts';
 import { icon } from '../../ui/octicons.ts';
 import type { IconName } from '../../ui/octicons.ts';
-import { isPinned, MAX_PINS } from './pins-settings.ts';
+import { attachPinDrag } from './pin-drag.ts';
+import { isPinned, MAX_PINS, repoKey } from './pins-settings.ts';
 import type { PinsSettings } from './pins-settings.ts';
 import { createRepoPicker } from './repo-picker.ts';
 
@@ -24,6 +25,8 @@ export interface HeaderPinsViewOptions {
   readonly loadRepos: () => Promise<readonly RepoSummary[]>;
   readonly onAdd: (repo: RepoRef) => void;
   readonly onRemove: (repo: RepoRef) => void;
+  /** Moves a pinned repo to a new position, by dragging in the bar or with the panel buttons. */
+  readonly onMove: (repo: RepoRef, index: number) => void;
   readonly onRecentChange: (recent: boolean) => void;
   readonly now?: (() => number) | undefined;
 }
@@ -50,6 +53,8 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
   const titleId = `${panelId}-title`;
   let state: HeaderPinsState | null = null;
   let picker: ReturnType<typeof createRepoPicker> | null = null;
+  /** Button to focus again after a move re-rendered the panel entries. */
+  let pendingFocus: { readonly key: string; readonly action: 'up' | 'down' } | null = null;
 
   const list = h('ul', { className: 'ghx-header-pins__list' });
   const nav = h(
@@ -124,13 +129,16 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     h('div', { className: 'ghx-header-pins__manage' }, trigger, panel),
   );
 
-  function pinLink(repo: RepoRef, kind: 'pinned' | 'recent'): HTMLLIElement {
+  function pinLink(repo: RepoRef, kind: 'pinned' | 'recent', index: number): HTMLLIElement {
     const fullName = repoFullName(repo);
     const label = kind === 'recent' ? `${fullName} (your most recent activity)` : fullName;
     const iconName: IconName = kind === 'recent' ? 'clock' : 'repo';
     return h(
       'li',
-      { className: 'ghx-header-pins__item' },
+      {
+        className: 'ghx-header-pins__item',
+        dataset: kind === 'pinned' ? { pinIndex: String(index) } : undefined,
+      },
       h(
         'a',
         {
@@ -138,6 +146,8 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
           href: repoUrl(repo),
           title: label,
           'aria-label': label,
+          // Native link dragging would start before our own pointer based reordering.
+          draggable: 'false',
         },
         icon(iconName),
         h('span', { className: 'ghx-header-pins__name' }, repo.name),
@@ -145,13 +155,32 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     );
   }
 
-  function entry(repo: RepoRef): HTMLLIElement {
+  function moveButton(repo: RepoRef, index: number, action: 'up' | 'down'): HTMLButtonElement {
+    const count = state?.settings.repos.length ?? 0;
+    const target = action === 'up' ? index - 1 : index + 1;
+    const moveButton = iconButton({
+      icon: action === 'up' ? 'chevron-up' : 'chevron-down',
+      label: `Move ${repoFullName(repo)} ${action}`,
+      size: 'small',
+      onClick: () => {
+        pendingFocus = { key: repoKey(repo), action };
+        options.onMove(repo, target);
+      },
+    });
+    moveButton.dataset['moveAction'] = action;
+    moveButton.disabled = target < 0 || target >= count;
+    return moveButton;
+  }
+
+  function entry(repo: RepoRef, index: number): HTMLLIElement {
     const fullName = repoFullName(repo);
     return h(
       'li',
-      { className: 'ghx-header-pins__entry' },
+      { className: 'ghx-header-pins__entry', dataset: { repoKey: repoKey(repo) } },
       icon('repo'),
       h('a', { className: 'ghx-header-pins__entry-link', href: repoUrl(repo) }, fullName),
+      moveButton(repo, index, 'up'),
+      moveButton(repo, index, 'down'),
       iconButton({
         icon: 'x',
         label: `Unpin ${fullName}`,
@@ -171,14 +200,15 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
   function update(next: HeaderPinsState): void {
     state = next;
     const { repos, recent } = next.settings;
-    const links = repos.map((repo) => pinLink(repo, 'pinned'));
+    const links = repos.map((repo, index) => pinLink(repo, 'pinned', index));
     if (next.recent !== null) {
-      links.push(pinLink(next.recent, 'recent'));
+      links.push(pinLink(next.recent, 'recent', links.length));
     }
     list.replaceChildren(...links);
     nav.hidden = links.length === 0;
     count.textContent = `${repos.length} of ${MAX_PINS}`;
     entries.replaceChildren(...repos.map(entry));
+    restoreMoveFocus();
     entries.hidden = repos.length === 0;
     empty.hidden = repos.length > 0;
     error.textContent = next.error ?? '';
@@ -191,6 +221,24 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     addButton.hidden = picker !== null;
     limitHint.hidden = !full;
     recentToggle.input.checked = recent;
+  }
+
+  function restoreMoveFocus(): void {
+    const pending = pendingFocus;
+    pendingFocus = null;
+    if (pending === null) {
+      return;
+    }
+    const moved = [...entries.children].find(
+      (child) => child instanceof HTMLElement && child.dataset['repoKey'] === pending.key,
+    );
+    const buttons = [...(moved?.querySelectorAll('button') ?? [])];
+    const same = buttons.find(
+      (candidate) => candidate.dataset['moveAction'] === pending.action && !candidate.disabled,
+    );
+    // At the end of the list the button in the moved direction is disabled, so the other one
+    // keeps the focus inside the entry.
+    (same ?? buttons.find((candidate) => !candidate.disabled))?.focus();
   }
 
   function openPicker(): void {
@@ -276,5 +324,26 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     }
   }
 
-  return { root, update, isOpen, open, close, dispose: () => close() };
+  const detachDrag = attachPinDrag({
+    document,
+    list,
+    onMove: (from, to) => {
+      const repo = state?.settings.repos[from];
+      if (repo !== undefined) {
+        options.onMove(repo, to);
+      }
+    },
+  });
+
+  return {
+    root,
+    update,
+    isOpen,
+    open,
+    close,
+    dispose: () => {
+      detachDrag();
+      close();
+    },
+  };
 }
