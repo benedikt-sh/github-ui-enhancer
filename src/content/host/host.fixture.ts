@@ -4,6 +4,7 @@ import type {
   RefreshReason,
   WidgetContext,
 } from '../../shared/widget.ts';
+import type { SizeEntry, SizeObserver, SizeObserverFactory } from './masonry.ts';
 import type { Clock, Timers, VisibilitySource } from './refresh-scheduler.ts';
 
 export interface FakeTime extends Timers {
@@ -156,4 +157,40 @@ export function createFakeWidget(options: FakeWidgetOptions = {}): FakeWidget {
         }
       : null,
   };
+}
+
+export interface FakeSizeObserver extends SizeObserver {
+  readonly observed: Set<Element>;
+  disconnected: boolean;
+  /** Reports new border box heights, like the browser after a layout. */
+  resize(...sizes: readonly (readonly [Element, number])[]): void;
+  /** Passes raw entries to the callback. */
+  report(entries: readonly SizeEntry[]): void;
+}
+
+export interface FakeSizeObservers {
+  readonly factory: SizeObserverFactory;
+  readonly instances: FakeSizeObserver[];
+}
+
+export function createFakeSizeObservers(): FakeSizeObservers {
+  const instances: FakeSizeObserver[] = [];
+  const factory: SizeObserverFactory = (onResize) => {
+    const observer: FakeSizeObserver = {
+      observed: new Set(),
+      disconnected: false,
+      observe: (target) => observer.observed.add(target),
+      unobserve: (target) => observer.observed.delete(target),
+      disconnect() {
+        observer.disconnected = true;
+        observer.observed.clear();
+      },
+      resize: (...sizes) =>
+        onResize(sizes.map(([target, blockSize]) => ({ target, borderBoxSize: [{ blockSize }] }))),
+      report: onResize,
+    };
+    instances.push(observer);
+    return observer;
+  };
+  return { factory, instances };
 }

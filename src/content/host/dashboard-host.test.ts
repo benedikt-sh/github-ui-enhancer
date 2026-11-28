@@ -14,8 +14,14 @@ import { h } from '../../ui/dom.ts';
 import { createDashboardHost, SINGLETON_CONFIG_KEY } from './dashboard-host.ts';
 import type { DashboardHost, DashboardHostOptions, HostView } from './dashboard-host.ts';
 import { DRAGGING_CLASS, DROP_AFTER_CLASS } from './drag-reorder.ts';
-import { createFakeTime, createFakeVisibility, createFakeWidget } from './host.fixture.ts';
-import type { FakeTime, FakeVisibility, FakeWidget } from './host.fixture.ts';
+import { MASONRY_CLASS } from './masonry.ts';
+import {
+  createFakeSizeObservers,
+  createFakeTime,
+  createFakeVisibility,
+  createFakeWidget,
+} from './host.fixture.ts';
+import type { FakeSizeObserver, FakeTime, FakeVisibility, FakeWidget } from './host.fixture.ts';
 
 const MINUTE = 60_000;
 const NOW = Date.parse('2026-11-26T12:00:00.000Z');
@@ -702,6 +708,7 @@ describe('createDashboardHost defaults', () => {
       refreshIntervalMs: 1,
     });
     await host.ready;
+    assert.ok(root.querySelector(`.ghx-host-grid.${MASONRY_CLASS}`), 'uses the ResizeObserver');
     clickMenuItem(root, 'Fake list: Mine');
     assert.equal(root.querySelectorAll('.ghx-host-item').length, 1);
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -726,6 +733,94 @@ describe('createDashboardHost defaults', () => {
         }),
       /must belong to a document with a window/,
     );
+  });
+});
+
+describe('createDashboardHost masonry', () => {
+  const span = (element: HTMLElement): string => element.style.getPropertyValue('grid-row-end');
+
+  interface MasonrySetup extends Setup {
+    readonly observer: FakeSizeObserver;
+    readonly grid: HTMLElement;
+  }
+
+  async function masonrySetup(options: SetupOptions = {}): Promise<MasonrySetup> {
+    const observers = createFakeSizeObservers();
+    const result = await setup({
+      ...options,
+      options: { createSizeObserver: observers.factory, ...options.options },
+    });
+    const observer = observers.instances[0];
+    assert.ok(observer);
+    const grid = result.root.querySelector<HTMLElement>('.ghx-host-grid');
+    assert.ok(grid);
+    return { ...result, observer, grid };
+  }
+
+  it('lays out the items as masonry and follows their heights', async () => {
+    const { root, grid, observer } = await masonrySetup();
+    const a = itemElement(root, 'a');
+    const b = itemElement(root, 'b');
+    assert.ok(grid.classList.contains(MASONRY_CLASS));
+    assert.deepEqual([...observer.observed], [a, b]);
+    observer.resize([a, 284], [b, 84]);
+    assert.deepEqual([span(a), span(b)], ['span 75', 'span 25']);
+    observer.resize([b, 184]);
+    assert.equal(span(b), 'span 50');
+  });
+
+  it('observes added, moved and removed items', async () => {
+    const { root, observer } = await masonrySetup();
+    clickMenuItem(root, 'Fake list: Mine');
+    const added = itemElement(root, 'new-1');
+    assert.ok(observer.observed.has(added));
+    clickMenuItem(itemElement(root, 'new-1'), 'Move up');
+    assert.equal(observer.observed.size, 3);
+    const a = itemElement(root, 'a');
+    clickMenuItem(a, 'Remove');
+    assert.equal(observer.observed.has(a), false);
+    assert.equal(observer.observed.size, 2);
+  });
+
+  it('measures the loading and empty states as well', async () => {
+    let release: () => void = () => undefined;
+    const { root, observer, host } = await masonrySetup({
+      ready: false,
+      store: (inner) => ({
+        ...inner,
+        get: async (key) => {
+          if (key === 'layout') {
+            await new Promise<void>((resolve) => (release = resolve));
+          }
+          return inner.get(key);
+        },
+      }),
+    });
+    const loading = root.querySelector('.ghx-host-grid > .ghx-state--loading');
+    assert.ok(loading);
+    assert.ok(observer.observed.has(loading));
+    release();
+    await host.ready;
+    for (const id of ['a', 'b']) {
+      clickMenuItem(itemElement(root, id), 'Remove');
+    }
+    const empty = root.querySelector('.ghx-host-grid > .ghx-state');
+    assert.ok(empty);
+    assert.deepEqual([...observer.observed], [empty]);
+  });
+
+  it('keeps plain rows without a size observer', async () => {
+    const { root } = await setup({ options: { createSizeObserver: null } });
+    const grid = root.querySelector('.ghx-host-grid');
+    assert.equal(grid?.classList.contains(MASONRY_CLASS), false);
+    assert.equal(itemElement(root, 'a').getAttribute('style'), null);
+  });
+
+  it('disconnects the observer on dispose', async () => {
+    const { host, observer } = await masonrySetup();
+    host.dispose();
+    assert.equal(observer.disconnected, true);
+    assert.equal(observer.observed.size, 0);
   });
 });
 

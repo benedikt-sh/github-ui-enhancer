@@ -105,6 +105,20 @@
   gap: var(--base-size-16, 16px);
 }
 
+/*
+ * Masonry, see `masonry.ts`: each child spans as many 4px rows as its height plus the gap
+ * needs. `align-items: start` above is essential here, stretched items would measure their
+ * own span and grow forever. The negative margin removes the gap kept below the last items.
+ * No `dense` packing: it would pull later items above a full width item into the hole next
+ * to it, far away from their layout position.
+ */
+.ghx-host-grid--masonry {
+  grid-auto-rows: 4px;
+  grid-auto-flow: row;
+  row-gap: 0;
+  margin-bottom: calc(-1 * var(--base-size-16, 16px));
+}
+
 .ghx-host-grid > .ghx-state {
   grid-column: 1 / -1;
 }

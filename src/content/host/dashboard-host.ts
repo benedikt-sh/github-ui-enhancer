@@ -14,6 +14,8 @@ import { emptyState, loadingState } from '../../ui/states.ts';
 import { createDragReorder } from './drag-reorder.ts';
 import { createInstanceItem } from './instance-item.ts';
 import type { HostItem } from './instance-item.ts';
+import { createMasonry, windowSizeObserver } from './masonry.ts';
+import type { SizeObserverFactory } from './masonry.ts';
 import {
   addInstance,
   moveInstance,
@@ -60,6 +62,8 @@ export interface DashboardHostOptions {
   /** Defaults to the visibility of the root's document. */
   readonly visibility?: VisibilitySource;
   readonly clock?: Clock;
+  /** Defaults to the `ResizeObserver` of the root's window, null keeps the grid in rows. */
+  readonly createSizeObserver?: SizeObserverFactory | null;
   readonly createId?: () => string;
   /** Widget failures and storage errors, e.g. for logging. Defaults to ignoring them. */
   readonly reportError?: (error: unknown) => void;
@@ -77,7 +81,7 @@ export interface DashboardHost {
 
 const ignore = (): void => undefined;
 
-function requireWindow(document: Document): Window {
+function requireWindow(document: Document): Window & typeof globalThis {
   const { defaultView } = document;
   if (defaultView === null) {
     throw new Error('The dashboard root must belong to a document with a window');
@@ -179,6 +183,15 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
       moveItem(id, (current) => placeInstance(current, id, targetId, side)),
   });
 
+  const masonry = createMasonry({
+    grid,
+    createObserver:
+      options.createSizeObserver === undefined
+        ? windowSizeObserver(requireWindow(document))
+        : options.createSizeObserver,
+  });
+
+  masonry.sync();
   applyView();
   loadTokenNotice();
   const singletonsReady = loadSingletons();
@@ -420,8 +433,13 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
     });
   }
 
-  /** Keeps existing widgets mounted and only moves their nodes, so nothing refetches. */
   function render(): void {
+    renderItems();
+    masonry.sync();
+  }
+
+  /** Keeps existing widgets mounted and only moves their nodes, so nothing refetches. */
+  function renderItems(): void {
     const instances = layout?.instances ?? [];
     const ids = new Set(instances.map((instance) => instance.id));
     for (const [id, item] of items) {
@@ -469,6 +487,7 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
       disposed = true;
       scheduler.dispose();
       dragReorder.dispose();
+      masonry.dispose();
       addMenu.close();
       for (const slot of singletons) {
         slot.dispose();
