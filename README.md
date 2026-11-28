@@ -14,6 +14,8 @@ Browser-Erweiterung für Chrome/Chromium und Firefox, die die Startseite von git
 - **Tweaks** in den Einstellungen, nach Bereichen gruppiert. Änderungen wirken sofort, auch in offenen Tabs.
   - Dashboard: das erweiterte Dashboard komplett abschalten, GitHubs Changelog-Widget ausblenden.
   - Header bar: angepinnte Repos als Schnelllinks in GitHubs Kopfleiste, optional zusätzlich das Repo mit deiner letzten Aktivität (standardmäßig aus).
+  - Repository pages: farbige Icons für bekannte Dateitypen und Tools in der Dateiliste (Simple Icons, fest eingebaut).
+  - Navigation: Repo Quick Switcher, zweimal Shift drücken öffnet eine Suche über alle deine Repos, komplett per Tastatur bedienbar.
 
 Die Daten kommen ausschließlich aus der offiziellen GitHub-API. Die Erweiterung schreibt nie etwas nach GitHub.
 
