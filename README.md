@@ -1,30 +1,44 @@
 # GitHub UI Enhancer
 
-Browser-Erweiterung für Chrome/Chromium und Firefox, die die Startseite von github.com durch ein konfigurierbares Dashboard ersetzt.
+A browser extension for Chrome/Chromium and Firefox that replaces the github.com start page with a configurable dashboard and adds a few quality-of-life tweaks to GitHub.
 
-- **Widgets, beliebig oft platzierbar:**
-  - Pull Requests (zugewiesen, Review angefragt, selbst erstellt oder eigener Suchfilter)
-  - Issues (zugewiesen, beobachtet, selbst erstellt oder eigener Suchfilter)
-  - GitHub-Actions-Runs eines Repos mit Branch-Filter und optional nur fehlgeschlagenen Runs
-  - Zuletzt geänderte Repos aus deiner eigenen Aktivität (Pushes, PRs, neue Branches)
-  - Offene Dependabot-PRs ausgewählter Repos
-  - Repo-Suche über alle Repositories deines Accounts und aller Organisationen, für die du ein Token hinterlegt hast. Sie läuft lokal ohne Request pro Tastendruck, der Repo-Index wird eine Stunde lang zwischengespeichert. GitHubs eigene Suche mit Strg+K bleibt unberührt.
-- **GitHubs Originalseite** bleibt über einen Schalter im Dashboard erreichbar. Der Feed liegt weiterhin unter `/feed`.
-- **Widgets verschieben** per Drag and Drop an ihrer Titelleiste oder über das Widget-Menü.
-- **Tweaks** in den Einstellungen, nach Bereichen gruppiert. Änderungen wirken sofort, auch in offenen Tabs.
-  - Dashboard: das erweiterte Dashboard komplett abschalten, GitHubs Changelog-Widget ausblenden.
-  - Header bar: angepinnte Repos als Schnelllinks in GitHubs Kopfleiste, optional zusätzlich das Repo mit deiner letzten Aktivität (standardmäßig aus).
-  - Repository pages: farbige Icons für bekannte Dateitypen und Tools in der Dateiliste (Simple Icons, fest eingebaut).
-  - Navigation: Repo Quick Switcher, zweimal Shift drücken öffnet eine Suche über alle deine Repos, komplett per Tastatur bedienbar.
+All data comes from the official GitHub API. The extension never writes anything to GitHub.
 
-Die Daten kommen ausschließlich aus der offiziellen GitHub-API. Die Erweiterung schreibt nie etwas nach GitHub.
+## Features
 
-## Voraussetzungen
+### Dashboard
 
-- Chrome/Chromium ab Version 126 oder Firefox ab Version 128
-- Zum Bauen: Node.js ab Version 24 und pnpm
+The start page you see on github.com while signed in becomes a grid of widgets. Every widget can be added as often as you like, configured, resized (half or full width) and reordered by dragging its title bar or via its menu. Widgets fill gaps below shorter neighbors, so the dashboard stays compact.
 
-## Bauen
+| Widget | What it shows |
+|---|---|
+| Pull requests | Assigned to you, review requested, created by you, or any custom search |
+| Issues | Assigned to you, watched by you, created by you, or any custom search |
+| Actions runs | Workflow runs of one repository, optionally filtered by branch and to failed runs only |
+| Recent repositories | Repositories you recently changed (pushes, pull requests, new branches), including private ones |
+| Dependabot pull requests | Open Dependabot pull requests in the repositories you select |
+| Repository search | Instant search over all repositories of your account and of every organization you added a token for |
+
+GitHub's original start page stays one click away ("Show GitHub's page"), and the feed is still available at `/feed`.
+
+### Tweaks
+
+The settings page groups small tweaks by the area of GitHub they affect. Changes apply immediately, also in tabs that are already open.
+
+| Area | Tweak | Default |
+|---|---|---|
+| Dashboard | Enhanced dashboard: replace GitHub's start page with the widget dashboard | on |
+| Dashboard | Hide GitHub's changelog widget; the dashboard then uses the freed space | off |
+| Header bar | Pinned repositories as quick links in GitHub's header, optionally plus the repository you were active in most recently | off |
+| Repository pages | File type icons next to known files and tools in the file list (Simple Icons, bundled with the extension) | on |
+| Navigation | Repo quick switcher: press Shift twice to search and open any of your repositories, fully keyboard driven | on |
+
+## Requirements
+
+- Chrome/Chromium 126 or newer, or Firefox 128 or newer
+- To build: Node.js 24 or newer and pnpm
+
+## Build
 
 ```bash
 pnpm install
@@ -34,77 +48,77 @@ pnpm install
 pnpm build
 ```
 
-Das Ergebnis liegt in `dist/chrome/` und `dist/firefox/`.
+The extension is written to `dist/chrome/` and `dist/firefox/`.
 
-## Installieren
+## Install
 
 ### Chrome / Chromium
 
-1. `chrome://extensions` öffnen.
-2. Rechts oben den **Entwicklermodus** einschalten.
-3. **Entpackte Erweiterung laden** und den Ordner `dist/chrome` wählen.
+1. Open `chrome://extensions`.
+2. Turn on **Developer mode** in the top right corner.
+3. Click **Load unpacked** and select the `dist/chrome` folder.
 
-Nach einem neuen Build in `chrome://extensions` auf das Neuladen-Symbol der Erweiterung klicken und den GitHub-Tab neu laden.
+After a new build, click the reload icon of the extension in `chrome://extensions` and reload the GitHub tab.
 
 ### Firefox
 
-Zum Ausprobieren:
+For trying it out:
 
-1. `about:debugging#/runtime/this-firefox` öffnen.
-2. **Temporäres Add-on laden** und die Datei `dist/firefox/manifest.json` wählen.
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on** and select `dist/firefox/manifest.json`.
 
-Temporäre Add-ons verschwinden beim Beenden von Firefox. Für eine dauerhafte Installation muss die Erweiterung über addons.mozilla.org signiert werden (auch als „unlisted“ für den Eigengebrauch möglich).
+Temporary add-ons are removed when Firefox quits. A permanent installation requires signing the extension on addons.mozilla.org, which is also possible as an "unlisted" add-on for personal use.
 
-Falls Firefox den Zugriff auf `github.com` und `api.github.com` nicht schon bei der Installation gewährt hat: unter `about:addons` bei der Erweiterung den Reiter **Berechtigungen** öffnen und beide Websites erlauben.
+If Firefox did not grant access to `github.com` and `api.github.com` during installation, open `about:addons`, select the extension, go to the **Permissions** tab and allow both sites.
 
-## Tokens einrichten
+## Set up access tokens
 
-Die Erweiterung braucht **fine-grained Personal Access Tokens mit reinen Leserechten**, und zwar eines pro Account bzw. Organisation. Ein fine-grained Token gilt immer nur für einen „Resource owner“. Classic Tokens werden absichtlich nicht unterstützt, weil sie für private Repos immer auch Schreibrechte haben.
+The extension uses **fine-grained personal access tokens with read-only permissions**, one per account or organization. A fine-grained token always belongs to exactly one resource owner. Classic tokens are deliberately not supported, because for private repositories they always include write access.
 
-1. Unter [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new) ein Token anlegen.
-2. **Resource owner:** zuerst dein eigener Account, danach je ein weiteres Token pro Organisation. Erscheint eine Organisation nicht in der Liste, erlaubt sie keine fine-grained Tokens.
+1. Create a token at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new).
+2. **Resource owner:** first your own account, then one more token per organization. If an organization is missing from the list, it does not allow fine-grained tokens.
 3. **Repository access:** All repositories.
-4. **Repository permissions**, alle auf **Read-only**:
+4. **Repository permissions**, all set to **Read-only**:
    - Metadata
    - Contents
    - Pull requests
    - Issues
    - Actions
-5. Ein Ablaufdatum setzen. Die Erweiterung warnt 14 Tage vorher.
-6. In den Einstellungen der Erweiterung (Rechtsklick auf das Erweiterungssymbol, **Optionen**, oder der Link im Dashboard) das Token einfügen.
+5. Set an expiration date. The extension warns you 14 days in advance.
+6. Paste the token on the extension's settings page (right-click the extension icon and choose **Options**, or use the link on the dashboard).
 
-Manche Organisationen verlangen, dass ein Admin das Token freigibt. Bis dahin zeigt die Erweiterung den Status „wartet auf Freigabe“.
+Some organizations require an admin to approve new tokens. Until then the settings page shows the token as waiting for approval.
 
-## Sicherheit und Datenschutz
+## Security and privacy
 
-- **Ablage:** Die Tokens liegen nur in `storage.local` des Browserprofils, nie in `storage.sync`. Sie verlassen den Hintergrundprozess der Erweiterung nicht. Das Skript auf github.com bekommt nur fertige Daten.
-- **Nur lesend:** Der API-Client erlaubt ausschließlich lesende Aufrufe und blockiert GraphQL-Mutations, zusätzlich zu den Leserechten der Tokens.
-- **Keine Dritten:** Es gibt keine Server und kein Tracking. Netzwerkanfragen gehen nur an `api.github.com`.
+- **Storage:** tokens are kept only in the browser profile's `storage.local`, never in `storage.sync`. They never leave the extension's background context; the script running on github.com only receives the resulting data.
+- **Read-only:** in addition to the read-only token permissions, the API client only allows read requests and refuses GraphQL mutations.
+- **No third parties:** there is no server and no tracking. Network requests go to `api.github.com` only.
 
-## Bekannte Einschränkungen
+## Known limitations
 
-- **Fehlende Repos:** Repos, in denen du Outside Collaborator einer Orga bist, und Repos anderer Nutzer sind mit fine-grained Tokens nicht erreichbar.
-- **Kein Abgleich zwischen Tabs:** Layout-Änderungen aus einem anderen Tab werden erst nach dem Neuladen sichtbar.
-- **Abhängig von GitHubs Seitenaufbau:** Ändert GitHub die Struktur der Startseite grundlegend, bleibt die Originalseite stehen, bis der Einhängepunkt angepasst ist.
+- **Missing repositories:** repositories where you are an outside collaborator of an organization, and repositories owned by other users, cannot be reached with fine-grained tokens.
+- **No live layout sync:** dashboard layout changes made in another tab show up after a reload.
+- **Depends on GitHub's markup:** if GitHub fundamentally changes the structure of a page, the extension leaves that page untouched until its hooks are updated.
 
-## Entwicklung
+## Development
 
 ```bash
 pnpm check
 ```
 
-Führt Typecheck, Bindestrich-Prüfung, Tests mit Coverage-Schwellen und den Build aus.
+Runs the type check, the long-dash check, the tests with coverage thresholds and the build.
 
 ```bash
 pnpm watch
 ```
 
-Baut bei jeder Änderung neu.
+Rebuilds on every change.
 
 ```bash
 pnpm test:perf
 ```
 
-Prüft die Zeitbudgets der Repo-Suche.
+Checks the time budgets of the repository search. These tests are not part of `pnpm check` because they are unreliable on a busy machine.
 
-Arbeitsregeln und Projektentscheidungen stehen in `CLAUDE.md`, Hintergründe in `docs/machbarkeit.md` und `docs/plan.md`.
+Working rules and project decisions are documented in `CLAUDE.md`. Background research and the original implementation plan are in `docs/machbarkeit.md` and `docs/plan.md` (both in German).
