@@ -22,10 +22,17 @@ import {
   mapRestIssue,
   mapWorkflowRun,
 } from './github-mapping.ts';
-import { byNewest, clampLimit, mergeParts, type Part } from './merge.ts';
+import { mapConcurrently } from './concurrency.ts';
+import { byNewest, clampLimit, mergeParts, type Part, uniqueErrors } from './merge.ts';
 import type { SearchKind } from './queries.ts';
 import { createSearchBatcher } from './search-batcher.ts';
-import { aggregateRecentRepos, isRecentEvent, mapEvent } from './recent-repos.ts';
+import {
+  aggregateRecentRepos,
+  isRecentEvent,
+  mapEvent,
+  ownEvents,
+  selectEventCandidates,
+} from './recent-repos.ts';
 import type { RecentEvent } from './recent-repos.ts';
 import { scopeSearchQuery } from './search-scope.ts';
 import {
@@ -48,6 +55,10 @@ export const BRANCHES_MAX_PAGES = 3;
 export const EVENTS_TTL_MS = 5 * 60 * 1000;
 /** GitHub keeps at most 300 events per user, which are three pages. */
 export const EVENTS_MAX_PAGES = 3;
+export const REPO_EVENTS_TTL_MS = 5 * 60 * 1000;
+export const REPO_EVENTS_PER_PAGE = 30;
+/** Parallel requests for the events of single repositories. */
+export const REPO_EVENTS_CONCURRENCY = 4;
 
 const PER_PAGE = 100;
 /** Bumped whenever the shape of cached values changes. */
@@ -61,6 +72,8 @@ const ROUTING_MISSES: readonly ApiErrorKind[] = [
   'unauthorized',
   'pending_approval',
 ];
+/** Errors after which no token is left that could read a repository. */
+const UNREADABLE: readonly ApiErrorKind[] = [...ROUTING_MISSES, 'no_token_for_owner'];
 /** Errors that tell the registry something about the token itself. */
 const TOKEN_FAILURES: readonly ApiErrorKind[] = ['unauthorized', 'pending_approval'];
 
@@ -90,6 +103,11 @@ interface CachedFetch<T> {
   >;
   readonly options: RequestOptions | undefined;
   readonly staleWhileRevalidate?: boolean;
+}
+
+interface RepoFetch<T> extends Omit<CachedFetch<T>, 'load' | 'bucket'> {
+  /** Caches an empty list instead of failing when no token can read the repository. */
+  readonly unreadableAsEmpty?: boolean;
 }
 
 interface TokenPart<T> extends Part<T> {
@@ -348,18 +366,29 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
   async function repoScoped<T>(
     repo: RepoRef,
     tokens: readonly ActiveToken[],
-    fetch: Omit<CachedFetch<T>, 'load' | 'bucket'>,
+    fetch: RepoFetch<T>,
     attempt: (
       token: ActiveToken,
       previous: CacheEntry<CachedList<T>> | undefined,
     ) => Promise<LoadResult<CachedList<T>>>,
   ): Promise<DataResult<T[]>> {
     const secrets = tokens.map((token) => token.secret);
+    const { unreadableAsEmpty, ...cached } = fetch;
     try {
       const result = await cachedFetch<T>({
-        ...fetch,
+        ...cached,
         bucket: 'core',
-        load: (previous) => routedLoad(repo, tokens, (token) => attempt(token, previous)),
+        load: async (previous) => {
+          try {
+            return await routedLoad(repo, tokens, (token) => attempt(token, previous));
+          } catch (error) {
+            // Cached like a result, so an unreadable repository costs one request per TTL.
+            if (unreadableAsEmpty === true && UNREADABLE.includes(toApiErrorInfo(error).kind)) {
+              return loaded<T>([]);
+            }
+            throw error;
+          }
+        },
       });
       const errors: unknown[] = [...result.value.errors];
       if (result.error !== undefined) {
@@ -381,40 +410,86 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
     }
   }
 
-  return {
-    async repoIndex(requestOptions) {
-      const tokens = await activeTokens();
-      if (tokens.length === 0) {
-        return noTokens();
+  async function repoIndex(requestOptions?: RequestOptions): Promise<DataResult<RepoSummary[]>> {
+    const tokens = await activeTokens();
+    if (tokens.length === 0) {
+      return noTokens();
+    }
+    const parts = await fanOut<RepoSummary>(tokens, (token) => ({
+      key: cacheKey('repos', token.id),
+      bucket: 'core',
+      ttl: REPO_INDEX_TTL_MS,
+      validate: isCachedListOf(isRepoSummary),
+      options: requestOptions,
+      staleWhileRevalidate: true,
+      load: () =>
+        pagedList(
+          token.secret,
+          '/user/repos',
+          { sort: 'pushed' },
+          REPO_INDEX_MAX_PAGES,
+          mapRepo,
+          'repositories',
+        ),
+    }));
+    for (const { token, items } of parts) {
+      for (const repo of items) {
+        routes.set(routeKey(repo), token.id);
       }
-      const parts = await fanOut<RepoSummary>(tokens, (token) => ({
-        key: cacheKey('repos', token.id),
-        bucket: 'core',
-        ttl: REPO_INDEX_TTL_MS,
-        validate: isCachedListOf(isRepoSummary),
-        options: requestOptions,
-        staleWhileRevalidate: true,
-        load: () =>
-          pagedList(
+    }
+    return mergeParts(parts, {
+      identify: (repo) => repo.id,
+      compare: byNewest((repo) => repo.pushedAt),
+      now: nowIso(),
+    });
+  }
+
+  /**
+   * The user's events in recently pushed repositories that are not public. For fine-grained
+   * tokens `GET /users/{login}/events` only returns public events, so e.g. pushes to private
+   * feature branches are missing there. Repositories no token can read are skipped silently.
+   */
+  async function recentRepoEvents(
+    tokens: readonly ActiveToken[],
+    logins: readonly string[],
+    requestOptions: RequestOptions | undefined,
+  ): Promise<Part<RecentEvent>[]> {
+    // Errors of the index are left out, the repository search already reports them.
+    const index = await repoIndex();
+    const candidates = selectEventCandidates(index.data, now());
+    return mapConcurrently(candidates, REPO_EVENTS_CONCURRENCY, async (repo) => {
+      const path = repoPath(repo, '/events');
+      const result = await repoScoped<RecentEvent>(
+        repo,
+        tokens,
+        {
+          key: cacheKey('repo-events', routeKey(repo)),
+          ttl: REPO_EVENTS_TTL_MS,
+          validate: isCachedListOf(isRecentEvent),
+          options: requestOptions,
+          unreadableAsEmpty: true,
+        },
+        (token, previous) =>
+          conditionalGet(
             token.secret,
-            '/user/repos',
-            { sort: 'pushed' },
-            REPO_INDEX_MAX_PAGES,
-            mapRepo,
-            'repositories',
+            path,
+            { per_page: REPO_EVENTS_PER_PAGE },
+            previous,
+            (data) => {
+              if (!Array.isArray(data)) {
+                throw invalidResponse(`GitHub GET ${path} did not return a list.`);
+              }
+              return mapAll(data, mapEvent);
+            },
           ),
-      }));
-      for (const { token, items } of parts) {
-        for (const repo of items) {
-          routes.set(routeKey(repo), token.id);
-        }
-      }
-      return mergeParts(parts, {
-        identify: (repo) => repo.id,
-        compare: byNewest((repo) => repo.pushedAt),
-        now: nowIso(),
-      });
-    },
+      );
+      const { data, errors, fetchedAt, stale } = result;
+      return { items: ownEvents(data, logins), errors, fetchedAt, stale };
+    });
+  }
+
+  return {
+    repoIndex,
 
     searchPullRequests: (query, listOptions) =>
       search('pullRequest', query, listOptions, mapPullRequestNode, isPullRequestItem),
@@ -533,12 +608,14 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
     },
 
     async recentRepositories(recentOptions) {
-      const tokens = (await activeTokens()).filter((token) => token.login !== null);
+      const allTokens = await activeTokens();
+      const tokens = allTokens.filter((token) => token.login !== null);
       if (tokens.length === 0) {
         return noTokens();
       }
       const limit = clampLimit(recentOptions?.limit);
-      const parts = await fanOut<RecentEvent>(tokens, (token) => ({
+      const logins = tokens.flatMap((token) => (token.login === null ? [] : [token.login]));
+      const userEvents = fanOut<RecentEvent>(tokens, (token) => ({
         // Version 2 added the actor of each event.
         key: cacheKey('events-v2', token.id),
         bucket: 'core',
@@ -558,7 +635,11 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
           return loaded(result.pages.flatMap((page) => mapAll(page, mapEvent)));
         },
       }));
-      const events = mergeParts(parts, {
+      const [userParts, repoParts] = await Promise.all([
+        userEvents,
+        recentRepoEvents(allTokens, logins, recentOptions),
+      ]);
+      const events = mergeParts<RecentEvent>([...userParts, ...repoParts], {
         identify: (event) => event.id,
         compare: byNewest((event) => event.createdAt),
         now: nowIso(),
@@ -566,6 +647,7 @@ export function createDataLayer(options: DataLayerOptions): DataLayer {
       return {
         ...events,
         data: aggregateRecentRepos(events.data, recentOptions?.kinds, limit),
+        errors: uniqueErrors(events.errors),
       };
     },
 

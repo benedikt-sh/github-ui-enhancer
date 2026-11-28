@@ -70,11 +70,14 @@ export function mergeParts<T>(parts: readonly Part<T>[], options: MergeOptions<T
   };
 }
 
-/** Drops repeated errors, e.g. the same failure reported for several repositories of an owner. */
+/**
+ * Keeps the first error of each kind and owner, e.g. one network error instead of one per
+ * repository of the same owner.
+ */
 export function uniqueErrors(errors: readonly ApiErrorInfo[]): ApiErrorInfo[] {
   const seen = new Set<string>();
   return errors.filter((error) => {
-    const key = JSON.stringify([error.kind, error.message, error.owner ?? null]);
+    const key = JSON.stringify([error.kind, error.owner ?? null]);
     if (seen.has(key)) {
       return false;
     }

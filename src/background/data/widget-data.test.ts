@@ -32,6 +32,8 @@ import {
   EVENTS_MAX_PAGES,
   EVENTS_TTL_MS,
   type DataLayerOptions,
+  REPO_EVENTS_CONCURRENCY,
+  REPO_EVENTS_TTL_MS,
   REPO_INDEX_MAX_PAGES,
   REPO_INDEX_TTL_MS,
   SEARCH_TTL_MS,
@@ -779,19 +781,46 @@ describe('workflowRuns with a status filter', () => {
 
 describe('recentRepositories', () => {
   const EVENTS = `${API}/users/alice/events`;
+  const REPOS = `${API}/user/repos`;
 
-  function restEvent(id: string, repo: string, type: string, at: string, ref?: string) {
+  function restEvent(
+    id: string,
+    repo: string,
+    type: string,
+    at: string,
+    ref?: string,
+    actor = 'alice',
+  ) {
     return {
       id,
       type,
       created_at: at,
+      actor: { login: actor },
       repo: { name: repo },
       payload: ref === undefined ? {} : { ref },
     };
   }
 
+  function privateRepo(fullName: string, pushedAt: string | null = '2026-11-27T08:00:00Z') {
+    const [owner = '', name = ''] = fullName.split('/');
+    return restRepo({
+      node_id: `R_${fullName}`,
+      name,
+      full_name: fullName,
+      owner: { login: owner },
+      private: true,
+      visibility: 'private',
+      pushed_at: pushedAt,
+    });
+  }
+
+  function repoEvents(fullName: string): string {
+    return `${API}/repos/${fullName}/events`;
+  }
+
   it('merges the events of all tokens into repositories, newest activity first', async () => {
     const { data, fake } = setup();
+    fake.on(REPOS, { body: [] });
     const at = '2026-11-27T09:00:00Z';
     const shared = restEvent('3', 'acme/web', 'PushEvent', at, 'refs/heads/x');
     fake.on(withToken(ALICE, EVENTS), {
@@ -821,11 +850,12 @@ describe('recentRepositories', () => {
       ['web'],
     );
     assert.equal(requestsTo(fake, EVENTS).length, 2);
-    assert.equal(new URL(fake.requests[0]!.url).searchParams.get('per_page'), '100');
+    assert.equal(new URL(requestsTo(fake, EVENTS)[0]!.url).searchParams.get('per_page'), '100');
   });
 
   it('caches events and follows at most the pages GitHub keeps', async () => {
     const { data, fake, clock } = setup([ALICE_TOKEN]);
+    fake.on(REPOS, { body: [] });
     const pages = Array.from({ length: EVENTS_MAX_PAGES + 1 }, (_, index) => index + 1);
     for (const page of pages) {
       fake.on(
@@ -861,6 +891,7 @@ describe('recentRepositories', () => {
     );
 
     const { data, fake } = setup([ALICE_TOKEN]);
+    fake.on(REPOS, { body: [] });
     fake.on(withToken(ALICE, EVENTS), { body: { message: 'odd' } });
     const result = await data.recentRepositories();
     assert.deepEqual(result.data, []);
@@ -869,5 +900,185 @@ describe('recentRepositories', () => {
       ['invalid_response'],
     );
   });
-});
 
+  it('adds own events from private repositories the user events leave out', async () => {
+    const { data, fake } = setup();
+    const at = '2026-11-27T08:00:00Z';
+    const shared = restEvent('2', 'acme/secret', 'PushEvent', '2026-11-27T07:00:00Z');
+    fake.on(withToken(ALICE, REPOS), { body: [] });
+    fake.on(withToken(ACME, REPOS), { body: [privateRepo('acme/secret')] });
+    fake.on(withToken(ALICE, EVENTS), {
+      body: [restEvent('1', 'alice/blog', 'IssuesEvent', '2026-11-27T06:00:00Z'), shared],
+    });
+    fake.on(withToken(ACME, EVENTS), { body: [] });
+    fake.on(withToken(ACME, repoEvents('acme/secret')), {
+      body: [
+        restEvent('5', 'acme/secret', 'PushEvent', '2026-11-27T09:30:00Z', 'refs/heads/x', 'bob'),
+        restEvent('4', 'acme/secret', 'PushEvent', '2026-11-27T09:00:00Z', 'refs/heads/feat'),
+        { ...restEvent('3', 'acme/secret', 'PullRequestEvent', at), actor: { login: 'ALICE' } },
+        shared,
+        { broken: true },
+      ],
+    });
+
+    const result = await data.recentRepositories();
+
+    assert.deepEqual(
+      result.data.map((item) => [
+        item.repo.name,
+        item.lastActivity,
+        item.branch,
+        item.lastActivityAt,
+        item.activityCount,
+      ]),
+      [
+        ['secret', 'push', 'feat', '2026-11-27T09:00:00Z', 3],
+        ['blog', 'issue', null, '2026-11-27T06:00:00Z', 1],
+      ],
+    );
+    assert.deepEqual(result.errors, []);
+    const [request, ...others] = requestsTo(fake, repoEvents('acme/secret'));
+    assert.equal(others.length, 0);
+    assert.equal(request?.url, `${repoEvents('acme/secret')}?per_page=30`);
+  });
+
+  it('routes like workflow runs: owner token first, else the token that listed it', async () => {
+    const { data, fake } = setup([ALICE_TOKEN, ACME_TOKEN, LOOSE_TOKEN]);
+    fake.on(withToken(ALICE, REPOS), { body: [privateRepo('acme/api')] });
+    fake.on(withToken(ACME, REPOS), { body: [] });
+    fake.on(withToken(LOOSE, REPOS), { body: [privateRepo('octo/tool')] });
+    fake.on(EVENTS, { body: [] });
+    fake.on(/\/repos\/.+\/events/, { body: [] });
+
+    const result = await data.recentRepositories();
+
+    assert.deepEqual(result.errors, []);
+    const used = (fullName: string) =>
+      requestsTo(fake, repoEvents(fullName)).map((r) => r.headers.get('authorization'));
+    assert.deepEqual(used('acme/api'), [`Bearer ${ACME}`]);
+    assert.deepEqual(used('octo/tool'), [`Bearer ${LOOSE}`]);
+  });
+
+  it('revalidates repository events with their ETag and caches them for a while', async () => {
+    const { data, fake, clock } = setup([ALICE_TOKEN]);
+    fake.on(REPOS, { body: [privateRepo('alice/secret')] });
+    fake.on(EVENTS, { body: [] });
+    fake.once(repoEvents('alice/secret'), {
+      headers: { etag: '"events"' },
+      body: [restEvent('1', 'alice/secret', 'PushEvent', '2026-11-27T09:00:00Z')],
+    });
+    fake.on(repoEvents('alice/secret'), { status: 304, headers: { etag: '"events"' } });
+
+    await data.recentRepositories();
+    clock.now += REPO_EVENTS_TTL_MS - 1;
+    await data.recentRepositories();
+    clock.now += 1;
+    const revalidated = await data.recentRepositories();
+    const forced = await data.recentRepositories({ forceRefresh: true });
+
+    assert.deepEqual(
+      requestsTo(fake, repoEvents('alice/secret')).map((r) => r.headers.get('if-none-match')),
+      [null, '"events"', '"events"'],
+    );
+    assert.deepEqual(
+      [revalidated, forced].map((result) => result.data.map((item) => item.repo.name)),
+      [['secret'], ['secret']],
+    );
+    assert.equal(requestsTo(fake, REPOS).length, 1);
+  });
+
+  it('asks only recently pushed private repositories, a few at a time', async () => {
+    const { data, fake } = setup([ALICE_TOKEN]);
+    const recent = Array.from({ length: 25 }, (_, index) =>
+      privateRepo(`alice/r${index}`, new Date(START - index * 60_000).toISOString()),
+    );
+    fake.on(REPOS, {
+      body: [
+        ...recent,
+        privateRepo('alice/old', '2026-10-01T00:00:00Z'),
+        restRepo({ full_name: 'alice/open', name: 'open', owner: { login: 'alice' } }),
+      ],
+    });
+    fake.on(EVENTS, { body: [] });
+    let running = 0;
+    let peak = 0;
+    fake.on(/\/repos\/.+\/events/, async () => {
+      running += 1;
+      peak = Math.max(peak, running);
+      await settle();
+      running -= 1;
+      return { body: [] };
+    });
+
+    await data.recentRepositories();
+
+    const asked = fake.requests
+      .map((request) => new URL(request.url).pathname)
+      .filter((path) => path.startsWith('/repos/'));
+    assert.deepEqual(
+      asked.toSorted(),
+      Array.from({ length: 20 }, (_, index) => `/repos/alice/r${index}/events`).toSorted(),
+    );
+    assert.equal(peak, REPO_EVENTS_CONCURRENCY);
+  });
+
+  it('skips unreadable repositories silently and keeps other failures once', async () => {
+    const { data, fake, clock } = setup([ALICE_TOKEN, ACME_TOKEN]);
+    fake.on(withToken(ALICE, REPOS), { body: [privateRepo('octo/hidden')] });
+    fake.on(withToken(ACME, REPOS), {
+      body: ['gone', 'down', 'flaky', 'odd', 'ok'].map((name) => privateRepo(`acme/${name}`)),
+    });
+    fake.on(EVENTS, { body: [] });
+    fake.on(repoEvents('octo/hidden'), { status: 404, body: { message: 'Not Found' } });
+    fake.on(repoEvents('acme/gone'), { status: 404, body: { message: 'Not Found' } });
+    fake.on(repoEvents('acme/down'), { status: 502, body: { message: 'Bad Gateway' } });
+    fake.on(repoEvents('acme/flaky'), { status: 500, body: { message: 'Oops' } });
+    fake.on(repoEvents('acme/odd'), { body: { message: 'not a list' } });
+    fake.on(repoEvents('acme/ok'), {
+      body: [restEvent('1', 'acme/ok', 'PushEvent', '2026-11-27T09:00:00Z')],
+    });
+
+    const first = await data.recentRepositories();
+    clock.now += 1000;
+    await data.recentRepositories();
+
+    assert.deepEqual(
+      first.data.map((item) => item.repo.name),
+      ['ok'],
+    );
+    assert.deepEqual(
+      first.errors.map((error) => [error.kind, error.owner]),
+      [
+        ['internal', 'acme'],
+        ['invalid_response', 'acme'],
+      ],
+    );
+    const count = (fullName: string) => requestsTo(fake, repoEvents(fullName)).length;
+    assert.deepEqual(
+      ['octo/hidden', 'acme/gone', 'acme/down', 'acme/ok'].map(count),
+      [1, 1, 2, 1],
+    );
+  });
+
+  it('serves cached events with one rate_limited error while the limit is exhausted', async () => {
+    const { data, fake } = setup([ALICE_TOKEN]);
+    fake.on(REPOS, { body: [privateRepo('alice/a'), privateRepo('alice/b')] });
+    fake.on(EVENTS, { body: [] });
+    fake.on(/\/repos\/.+\/events/, (request) => ({
+      headers: rateHeaders('core', 0, START + 60_000),
+      body: [restEvent(request.url, 'alice/a', 'PushEvent', '2026-11-27T09:00:00Z')],
+    }));
+
+    await data.recentRepositories();
+    const before = fake.requests.length;
+    const result = await data.recentRepositories({ forceRefresh: true });
+
+    assert.equal(fake.requests.length, before);
+    assert.equal(result.stale, true);
+    assert.deepEqual(
+      result.data.map((item) => [item.repo.name, item.activityCount]),
+      [['a', 2]],
+    );
+    assert.deepEqual(kinds(result), ['rate_limited']);
+  });
+});

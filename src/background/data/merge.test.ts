@@ -101,23 +101,23 @@ describe('mergeParts', () => {
 });
 
 describe('uniqueErrors', () => {
-  it('keeps the first of equal errors and tells owners apart', () => {
-    const down = { kind: 'network', message: 'down', owner: 'acme' } as const;
+  it('keeps the first error of each kind and owner', () => {
+    const down = { kind: 'network', message: 'GET /a failed', owner: 'acme' } as const;
 
     assert.deepEqual(
       uniqueErrors([
         down,
-        { ...down, status: 500 },
+        { ...down, message: 'GET /b failed' },
         { ...down, owner: 'octo' },
-        { kind: 'network', message: 'down' },
-        { kind: 'internal', message: 'down' },
-        { kind: 'network', message: 'down' },
+        { kind: 'network', message: 'GET /c failed' },
+        { kind: 'internal', message: 'GET /c failed', owner: 'acme' },
+        { kind: 'network', message: 'GET /d failed' },
       ]),
       [
         down,
         { ...down, owner: 'octo' },
-        { kind: 'network', message: 'down' },
-        { kind: 'internal', message: 'down' },
+        { kind: 'network', message: 'GET /c failed' },
+        { kind: 'internal', message: 'GET /c failed', owner: 'acme' },
       ],
     );
   });

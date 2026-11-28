@@ -110,7 +110,10 @@ export function selectEventCandidates(repos: readonly RepoSummary[], now: number
 }
 
 /** Events caused by one of the given logins, compared case-insensitively. */
-export function ownEvents(events: readonly RecentEvent[], logins: readonly string[]): RecentEvent[] {
+export function ownEvents(
+  events: readonly RecentEvent[],
+  logins: readonly string[],
+): RecentEvent[] {
   const own = new Set(logins.map((login) => login.toLowerCase()));
   return events.filter((event) => event.actor !== null && own.has(event.actor.toLowerCase()));
 }
