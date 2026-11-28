@@ -88,3 +88,17 @@ export function removePin(settings: PinsSettings, repo: RepoRef): PinsSettings {
 export function setRecent(settings: PinsSettings, recent: boolean): PinsSettings {
   return { ...settings, recent };
 }
+
+/** Moves a pinned repo to `index` (clamped). Unknown repos and unchanged positions are no-ops. */
+export function movePin(settings: PinsSettings, repo: RepoRef, index: number): PinsSettings {
+  const key = repoKey(repo);
+  const from = settings.repos.findIndex((pinned) => repoKey(pinned) === key);
+  const to = Math.max(0, Math.min(settings.repos.length - 1, Math.trunc(index)));
+  const moved = settings.repos[from];
+  if (moved === undefined || from === to) {
+    return settings;
+  }
+  const repos = settings.repos.filter((_, position) => position !== from);
+  repos.splice(to, 0, moved);
+  return { ...settings, repos };
+}

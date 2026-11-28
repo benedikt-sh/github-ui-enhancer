@@ -6,6 +6,7 @@ import {
   defaultPins,
   isPinned,
   MAX_PINS,
+  movePin,
   parsePins,
   parseRepo,
   PINS_VERSION,
@@ -116,3 +117,25 @@ describe('pin helpers', () => {
     assert.deepEqual(setRecent(settings, false), { ...settings, recent: false });
   });
 });
+
+describe('movePin', () => {
+  const a = repo('o', 'a');
+  const b = repo('o', 'b');
+  const c = repo('o', 'c');
+  const settings = { repos: [a, b, c], recent: false };
+  const names = (next: { repos: readonly { name: string }[] }) => next.repos.map((r) => r.name);
+
+  it('moves a pin forwards and backwards', () => {
+    assert.deepEqual(names(movePin(settings, a, 2)), ['b', 'c', 'a']);
+    assert.deepEqual(names(movePin(settings, repo('O', 'C'), 0)), ['c', 'a', 'b']);
+    assert.deepEqual(names(movePin(settings, b, 1.7)), ['a', 'b', 'c']);
+  });
+
+  it('clamps the target and keeps settings for no-ops', () => {
+    assert.deepEqual(names(movePin(settings, a, 99)), ['b', 'c', 'a']);
+    assert.deepEqual(names(movePin(settings, c, -5)), ['c', 'a', 'b']);
+    assert.equal(movePin(settings, b, 1), settings);
+    assert.equal(movePin(settings, repo('x', 'y'), 0), settings);
+  });
+});
+
