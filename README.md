@@ -1,5 +1,8 @@
 # GitHub UI Enhancer
 
+> [!NOTE]
+> This is an independent project. It is not affiliated with, endorsed by or in any way officially associated with GitHub, Inc. GitHub and the GitHub logo are trademarks of GitHub, Inc.
+
 A browser extension for Chrome/Chromium and Firefox that replaces the github.com start page with a configurable dashboard and adds a few quality-of-life tweaks to GitHub.
 
 All data comes from the official GitHub API. The extension never writes anything to GitHub.
