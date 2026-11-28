@@ -12,6 +12,16 @@ describe('buildManifest', () => {
     assert.equal(manifest['browser_specific_settings'], undefined);
   });
 
+  it('adds a version name for chrome prereleases only', () => {
+    const chrome = buildManifest({ target: 'chrome', version: '2.0.0', versionName: '2.0.0-rc.1' });
+    const firefox = buildManifest({ target: 'firefox', version: '2.0.0', versionName: '2.0.0-rc.1' });
+    const release = buildManifest({ target: 'chrome', version: '2.0.0', versionName: '2.0.0' });
+
+    assert.equal(chrome['version_name'], '2.0.0-rc.1');
+    assert.equal(firefox['version_name'], undefined);
+    assert.equal(release['version_name'], undefined);
+  });
+
   it('uses background scripts and gecko settings for firefox', () => {
     const manifest = buildManifest({ target: 'firefox', version: '1.2.3' });
 

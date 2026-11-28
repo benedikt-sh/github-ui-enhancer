@@ -5,9 +5,13 @@ import * as esbuild from 'esbuild';
 
 import { BROWSER_TARGETS, buildManifest, MIN_CHROME_VERSION, MIN_FIREFOX_VERSION } from './lib/manifest.ts';
 import type { BrowserTarget } from './lib/manifest.ts';
+import { parseReleaseVersion } from './lib/version.ts';
 
 const watch = process.argv.includes('--watch');
-const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
+const packageVersion = (JSON.parse(readFileSync('package.json', 'utf8')) as { version: string })
+  .version;
+// Release builds take the version from the git tag, see .github/workflows/release.yml.
+const release = parseReleaseVersion(process.env['EXTENSION_VERSION'] ?? packageVersion);
 
 const STATIC_FILES: ReadonlyArray<[from: string, to: string]> = [
   ['src/options/options.html', 'options.html'],
@@ -47,7 +51,11 @@ function writeStaticFiles(target: BrowserTarget): void {
   mkdirSync(outdir, { recursive: true });
   writeFileSync(
     join(outdir, 'manifest.json'),
-    `${JSON.stringify(buildManifest({ target, version }), null, 2)}\n`,
+    `${JSON.stringify(
+      buildManifest({ target, version: release.version, versionName: release.semver }),
+      null,
+      2,
+    )}\n`,
   );
   for (const [from, to] of STATIC_FILES) {
     copyFileSync(from, join(outdir, to));

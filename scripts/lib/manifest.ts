@@ -12,9 +12,15 @@ export const FIREFOX_ADDON_ID = 'github-ui-enhancer@extension';
 export interface ManifestInput {
   target: BrowserTarget;
   version: string;
+  /** Human readable version for prereleases, only Chrome knows the field. */
+  versionName?: string | undefined;
 }
 
-export function buildManifest({ target, version }: ManifestInput): Record<string, unknown> {
+export function buildManifest({
+  target,
+  version,
+  versionName,
+}: ManifestInput): Record<string, unknown> {
   const manifest: Record<string, unknown> = {
     manifest_version: 3,
     name: 'GitHub UI Enhancer',
@@ -40,6 +46,9 @@ export function buildManifest({ target, version }: ManifestInput): Record<string
 
   if (target === 'chrome') {
     manifest['background'] = { service_worker: 'background.js' };
+    if (versionName !== undefined && versionName !== version) {
+      manifest['version_name'] = versionName;
+    }
     manifest['minimum_chrome_version'] = MIN_CHROME_VERSION;
   } else {
     manifest['background'] = { scripts: ['background.js'] };
