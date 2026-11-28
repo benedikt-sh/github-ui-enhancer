@@ -35,6 +35,11 @@
   margin-left: auto;
 }
 
+/* The UI kit's select spans its container, side by side both size to their content instead. */
+.ghx-actions-runs__filters .ghx-select {
+  width: auto;
+}
+
 .ghx-actions-runs__branch-picker {
   display: inline-flex;
   align-items: center;
