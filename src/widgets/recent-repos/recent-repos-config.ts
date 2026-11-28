@@ -2,7 +2,7 @@ import { isOneOf, isRecord } from '../../shared/guards.ts';
 import type { RepoActivityKind } from '../../shared/types.ts';
 import type { WidgetPreset } from '../../shared/widget.ts';
 
-export const RECENT_REPOS_LIMITS = [5, 10, 20] as const;
+export const RECENT_REPOS_LIMITS = [2, 3, 5, 10, 20] as const;
 
 export type RecentReposLimit = (typeof RECENT_REPOS_LIMITS)[number];
 

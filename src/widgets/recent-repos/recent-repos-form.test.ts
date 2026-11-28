@@ -85,7 +85,7 @@ describe('renderRecentReposForm', () => {
     assert.equal(selectByName('limit').value, '20');
     assert.deepEqual(
       [...selectByName('limit').options].map((option) => option.value),
-      ['5', '10', '20'],
+      ['2', '3', '5', '10', '20'],
     );
     assert.equal(labelOf(selectByName('limit')), 'Number of repositories');
     assert.ok(target.querySelector('form')?.hasAttribute('novalidate'));
