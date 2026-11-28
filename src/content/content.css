@@ -1,6 +1,8 @@
 @import '../ui/styles.css';
 @import './mount/mount.css';
 @import './header-pins/header-pins.css';
+@import './quick-switcher/quick-switcher.css';
+@import './file-icons/file-icons.css';
 @import './host/host.css';
 @import '../widgets/repo-search/repo-search.css';
 @import '../widgets/pr-list/pr-list.css';

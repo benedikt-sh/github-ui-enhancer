@@ -12,12 +12,14 @@ function recorder(calls: string[], name: string): Toggleable {
 }
 
 describe('applyTweaks', () => {
-  it('starts and stops the dashboard, the changelog hider and the header pins', () => {
+  it('starts and stops every tweak target', () => {
     const calls: string[] = [];
     const targets = {
       dashboard: recorder(calls, 'dashboard'),
       changelogHider: recorder(calls, 'hider'),
       headerPins: recorder(calls, 'pins'),
+      fileIcons: recorder(calls, 'icons'),
+      quickSwitcher: recorder(calls, 'switcher'),
     };
 
     applyTweaks(
@@ -45,9 +47,13 @@ describe('applyTweaks', () => {
       'dashboard:start',
       'hider:stop',
       'pins:stop',
+      'icons:start',
+      'switcher:start',
       'dashboard:stop',
       'hider:start',
       'pins:start',
+      'icons:stop',
+      'switcher:stop',
     ]);
   });
 });

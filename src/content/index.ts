@@ -9,11 +9,13 @@ import { createRequestSender } from '../shared/messages.ts';
 import { createAreaStore, STORAGE_KEYS } from '../shared/storage.ts';
 import { defaultTweaks, parseTweaks } from '../shared/tweaks.ts';
 import { createDefaultLayout, DASHBOARD_WIDGETS } from './dashboard-widgets.ts';
+import { createFileIcons } from './file-icons/file-icons.ts';
 import { createHeaderPins } from './header-pins/header-pins.ts';
 import { createDashboardHost } from './host/dashboard-host.ts';
 import type { DashboardHost } from './host/dashboard-host.ts';
 import { createMountController } from './mount/mount-controller.ts';
 import { pageLogin } from './mount/selectors.ts';
+import { createQuickSwitcher } from './quick-switcher/quick-switcher.ts';
 import { applyTweaks } from './tweaks/apply-tweaks.ts';
 import { createChangelogHider } from './tweaks/changelog-hider.ts';
 
@@ -70,6 +72,8 @@ const targets = {
     store: syncStore,
     subscribe: (listener) => watchStorageKey(api, 'sync', STORAGE_KEYS.headerPins, listener),
   }),
+  fileIcons: createFileIcons({ document, window }),
+  quickSwitcher: createQuickSwitcher({ document, window, data, openOptions }),
 };
 syncStore.get(STORAGE_KEYS.tweaks).then(
   (raw) => applyTweaks(parseTweaks(raw), targets),
