@@ -187,6 +187,24 @@ describe('createDashboardHost rendering', () => {
     assert.equal(widgets.runs.mounts.length, 1);
   });
 
+  it('gives every toolbar button the same size', async () => {
+    const { root } = await setup();
+    const buttons = [
+      ...root.querySelectorAll(
+        '.ghx-host-toolbar__actions > button, .ghx-host-toolbar__actions > * > button:first-child',
+      ),
+    ];
+    assert.deepEqual(
+      buttons.map((element) => element.textContent),
+      ['Refresh all', 'Add widget', "Show GitHub's page"],
+    );
+    for (const element of buttons) {
+      assert.ok(element.classList.contains('ghx-btn'));
+      assert.equal(element.classList.contains('ghx-btn--small'), false);
+      assert.equal(element.classList.contains('ghx-btn--icon'), false);
+    }
+  });
+
   it('shows a loading state until the layout is loaded', async () => {
     let release: (value: unknown) => void = () => undefined;
     const { root, host } = await setup({

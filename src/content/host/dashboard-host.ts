@@ -129,12 +129,12 @@ export function createDashboardHost(options: DashboardHostOptions): DashboardHos
     h(
       'div',
       { className: 'ghx-host-toolbar__actions' },
-      button({ label: 'Refresh all', icon: 'sync', size: 'small', onClick: refreshAll }),
+      // Medium like the add menu trigger, which has no size option.
+      button({ label: 'Refresh all', icon: 'sync', onClick: refreshAll }),
       addMenu.root,
       button({
         label: "Show GitHub's page",
         icon: 'eye',
-        size: 'small',
         variant: 'invisible',
         onClick: () => changeView('original'),
       }),
