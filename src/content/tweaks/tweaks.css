@@ -2,3 +2,11 @@
 [data-ghx-hidden='changelog'] {
   display: none !important;
 }
+
+/*
+ * GitHub caps the dashboard column (the parent of the mount container) at 680px and leaves the
+ * rest to the changelog. Without the changelog that cap only wastes space.
+ */
+:root:has([data-ghx-hidden='changelog']) :has(> [data-ghx-mount]) {
+  max-width: none !important;
+}
