@@ -5,10 +5,15 @@ Browser-Erweiterung für Chrome/Chromium und Firefox, die die Startseite von git
 - **Widgets, beliebig oft platzierbar:**
   - Pull Requests (zugewiesen, Review angefragt, selbst erstellt oder eigener Suchfilter)
   - Issues (zugewiesen, beobachtet, selbst erstellt oder eigener Suchfilter)
-  - GitHub-Actions-Runs eines Repos mit Branch-Filter
+  - GitHub-Actions-Runs eines Repos mit Branch-Filter und optional nur fehlgeschlagenen Runs
+  - Zuletzt geänderte Repos aus deiner eigenen Aktivität (Pushes, PRs, neue Branches)
+  - Offene Dependabot-PRs ausgewählter Repos
   - Repo-Suche über alle Repositories deines Accounts und aller Organisationen, für die du ein Token hinterlegt hast. Sie läuft lokal ohne Request pro Tastendruck, der Repo-Index wird eine Stunde lang zwischengespeichert. GitHubs eigene Suche mit Strg+K bleibt unberührt.
 - **GitHubs Originalseite** bleibt über einen Schalter im Dashboard erreichbar. Der Feed liegt weiterhin unter `/feed`.
-- **Tweaks** in den Einstellungen, nach Bereichen gruppiert. Im Bereich „Dashboard“ lässt sich das erweiterte Dashboard komplett abschalten und GitHubs Changelog-Widget ausblenden. Änderungen wirken sofort, auch in offenen Tabs.
+- **Widgets verschieben** per Drag and Drop an ihrer Titelleiste oder über das Widget-Menü.
+- **Tweaks** in den Einstellungen, nach Bereichen gruppiert. Änderungen wirken sofort, auch in offenen Tabs.
+  - Dashboard: das erweiterte Dashboard komplett abschalten, GitHubs Changelog-Widget ausblenden.
+  - Header bar: angepinnte Repos als Schnelllinks in GitHubs Kopfleiste, optional zusätzlich das Repo mit deiner letzten Aktivität (standardmäßig aus).
 
 Die Daten kommen ausschließlich aus der offiziellen GitHub-API. Die Erweiterung schreibt nie etwas nach GitHub.
 
