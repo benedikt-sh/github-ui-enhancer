@@ -1,11 +1,12 @@
 /*
- * Pinned repositories in GitHub's global header bar. The element is a flex child of the bar,
- * so it may shrink: the links clip, the manage button stays.
+ * Pinned repositories in GitHub's global header bar. The element is a flex child of the bar and
+ * gives up its space before GitHub's own page context does. Pins that no longer fit wrap into a
+ * hidden second row, so only whole pins are shown; the manage panel still lists all of them.
  */
 
 .ghx-header-pins {
   display: flex;
-  flex: 0 1 auto;
+  flex: 0 1000 auto;
   align-items: center;
   gap: var(--base-size-4, 4px);
   min-width: 0;
@@ -31,8 +32,11 @@
 
 .ghx-header-pins__list {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--base-size-4, 4px);
+  gap: var(--base-size-8, 8px) var(--base-size-4, 4px);
+  height: 32px;
+  overflow: hidden;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -46,7 +50,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--base-size-4, 4px);
-  max-width: 160px;
+  max-width: 140px;
   height: 32px;
   padding: 0 var(--base-size-8, 8px);
   border: 1px solid var(--borderColor-default, #d1d9e0);
