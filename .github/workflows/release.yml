@@ -1,0 +1,88 @@
+name: Release
+
+# Builds the extension for a version tag and publishes both browser packages as a GitHub
+# release. Nothing is uploaded to an extension store.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+      - 'v[0-9]+.[0-9]+.[0-9]+\+*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    env:
+      # Read by scripts/build.ts, which rejects anything that is not a semantic version.
+      EXTENSION_VERSION: ${{ github.ref_name }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check, test and build
+        run: pnpm check
+
+      - name: Package
+        id: package
+        run: |
+          set -euo pipefail
+          semver="${EXTENSION_VERSION#v}"
+          mkdir -p release
+          for target in chrome firefox; do
+            (cd "dist/${target}" && zip -qr -X "../../release/github-ui-enhancer-${semver}-${target}.zip" .)
+          done
+          (cd release && sha256sum -- *.zip > SHA256SUMS.txt)
+          core="${semver%%+*}"
+          if [[ "${core}" == *-* ]]; then prerelease=true; else prerelease=false; fi
+          echo "semver=${semver}" >> "${GITHUB_OUTPUT}"
+          echo "prerelease=${prerelease}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ steps.package.outputs.prerelease }}
+          SEMVER: ${{ steps.package.outputs.semver }}
+        run: |
+          set -euo pipefail
+          cat > release/NOTES.md <<'EOF'
+          ## Install
+
+          Download the package for your browser below and unpack it into a folder you keep.
+
+          - **Chrome / Chromium:** open `chrome://extensions`, turn on **Developer mode**, click
+            **Load unpacked** and select the unpacked folder. To update, unpack the new version
+            into the same folder and click the reload icon of the extension.
+          - **Firefox:** open `about:debugging#/runtime/this-firefox`, click
+            **Load Temporary Add-on** and select `manifest.json` from the unpacked folder.
+            Unsigned add-ons stay loaded until Firefox quits.
+
+          `SHA256SUMS.txt` contains the checksums of both packages.
+          EOF
+          flags=(--verify-tag --title "${GITHUB_REF_NAME}" --notes-file release/NOTES.md --generate-notes)
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "${GITHUB_REF_NAME}" "${flags[@]}" \
+            "release/github-ui-enhancer-${SEMVER}-chrome.zip" \
+            "release/github-ui-enhancer-${SEMVER}-firefox.zip" \
+            release/SHA256SUMS.txt
