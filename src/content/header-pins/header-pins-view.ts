@@ -11,6 +11,8 @@ import { createRepoPicker } from './repo-picker.ts';
 
 /** Marks the extension's element in GitHub's header, also stale copies Turbo restores. */
 export const PINS_ATTRIBUTE = 'data-ghx-header-pins';
+/** Set on `<html>` while the panel is open, `header-pins.css` lifts the header above the page. */
+export const PANEL_OPEN_ATTRIBUTE = 'data-ghx-header-pins-open';
 
 export interface HeaderPinsState {
   readonly settings: PinsSettings;
@@ -305,6 +307,7 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     }
     panel.hidden = false;
     trigger.setAttribute('aria-expanded', 'true');
+    document.documentElement.setAttribute(PANEL_OPEN_ATTRIBUTE, '');
     document.addEventListener('mousedown', onDocumentPointer, true);
     document.addEventListener('focusin', onDocumentPointer, true);
     focusAddOrTrigger();
@@ -317,6 +320,7 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     closePicker();
     panel.hidden = true;
     trigger.setAttribute('aria-expanded', 'false');
+    document.documentElement.removeAttribute(PANEL_OPEN_ATTRIBUTE);
     document.removeEventListener('mousedown', onDocumentPointer, true);
     document.removeEventListener('focusin', onDocumentPointer, true);
     if (restoreFocus) {

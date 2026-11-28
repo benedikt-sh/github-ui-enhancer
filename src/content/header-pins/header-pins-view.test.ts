@@ -5,7 +5,12 @@ import { installDom } from '../../../test/dom.ts';
 import type { DomEnvironment } from '../../../test/dom.ts';
 import type { RepoRef } from '../../shared/types.ts';
 import { flush, NOW, summary } from './header-pins.fixture.ts';
-import { createHeaderPinsView, PINS_ATTRIBUTE, repoUrl } from './header-pins-view.ts';
+import {
+  createHeaderPinsView,
+  PANEL_OPEN_ATTRIBUTE,
+  PINS_ATTRIBUTE,
+  repoUrl,
+} from './header-pins-view.ts';
 import type { HeaderPinsState, HeaderPinsView } from './header-pins-view.ts';
 import { MAX_PINS } from './pins-settings.ts';
 
@@ -107,6 +112,7 @@ describe('createHeaderPinsView', () => {
     trigger.click();
     assert.equal(view.isOpen(), true);
     assert.equal(panel.hidden, false);
+    assert.ok(document.documentElement.hasAttribute(PANEL_OPEN_ATTRIBUTE));
     assert.equal(trigger.getAttribute('aria-expanded'), 'true');
     assert.equal(document.activeElement, query(view.root, '.ghx-header-pins__add'));
     view.open();
@@ -114,6 +120,7 @@ describe('createHeaderPinsView', () => {
     trigger.click();
     assert.equal(view.isOpen(), false);
     assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(document.documentElement.hasAttribute(PANEL_OPEN_ATTRIBUTE), false);
     view.close();
 
     view.open();

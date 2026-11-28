@@ -120,6 +120,15 @@
 
 /* Panel */
 
+/*
+ * GitHub's header forms its own stacking context below the page content, so no z-index on the
+ * panel alone gets it above the dashboard. While it is open, every positioned ancestor of the
+ * pins is lifted instead.
+ */
+:root[data-ghx-header-pins-open] :has([data-ghx-header-pins]) {
+  z-index: 1000;
+}
+
 .ghx-header-pins__panel {
   position: absolute;
   z-index: 100;
