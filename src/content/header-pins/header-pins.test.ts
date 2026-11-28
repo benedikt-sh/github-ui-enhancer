@@ -11,6 +11,7 @@ import { areaKey, createAreaStore, STORAGE_KEYS } from '../../shared/storage.ts'
 import type { RecentRepoItem, RepoRef } from '../../shared/types.ts';
 import type { Toggleable } from '../tweaks/apply-tweaks.ts';
 import { createHeaderPins, RECENT_KINDS, RECENT_REFRESH_MS, SAVE_ERROR } from './header-pins.ts';
+import type { HeaderPinsOptions } from './header-pins.ts';
 import { flush, GLOBAL_BAR, NOW, summary } from './header-pins.fixture.ts';
 import { PINS_ATTRIBUTE } from './header-pins-view.ts';
 import { PINS_VERSION } from './pins-settings.ts';
@@ -48,7 +49,11 @@ interface Setup {
 
 const running: Toggleable[] = [];
 
-function setup(initial: Record<string, unknown> = {}, recent: RecentRepoItem[] = []): Setup {
+function setup(
+  initial: Record<string, unknown> = {},
+  recent: RecentRepoItem[] = [],
+  extra: Partial<HeaderPinsOptions> = {},
+): Setup {
   const area = createFakeStorageArea(initial);
   const data = createFakeWidgetData()
     .handle('recentRepositories', async () => dataResult(recent))
@@ -65,6 +70,7 @@ function setup(initial: Record<string, unknown> = {}, recent: RecentRepoItem[] =
       return () => listeners.delete(listener);
     },
     now: () => clock.time,
+    ...extra,
   });
   running.push(pins);
   return { pins, area, data, listeners, clock };
@@ -210,21 +216,20 @@ describe('createHeaderPins', () => {
     assert.deepEqual(roots(), []);
   });
 
-  it('waits until the page has finished loading before inserting', async () => {
-    const { pins } = setup(stored([repo('octo', 'alpha')]));
-    let state: DocumentReadyState = 'loading';
-    Object.defineProperty(document, 'readyState', { configurable: true, get: () => state });
-    try {
-      pins.start();
-      await flush();
-      assert.deepEqual(roots(), []);
+  it('waits until the page has settled before inserting', async () => {
+    let settle = (): void => {};
+    const settled = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const { pins } = setup(stored([repo('octo', 'alpha')]), [], { settled });
 
-      state = 'interactive';
-      document.dispatchEvent(new Event('readystatechange'));
-      assert.equal(roots().length, 1);
-    } finally {
-      Reflect.deleteProperty(document, 'readyState');
-    }
+    pins.start();
+    await flush();
+    assert.deepEqual(roots(), []);
+
+    settle();
+    await flush();
+    assert.equal(roots().length, 1);
   });
 
   it('does not insert anything when stopped while loading', async () => {

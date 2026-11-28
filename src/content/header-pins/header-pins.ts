@@ -33,6 +33,11 @@ export interface HeaderPinsOptions {
   /** Reports changes of the stored pins, also from other tabs, returns an unsubscribe. */
   readonly subscribe?: (listener: (value: unknown) => void) => () => void;
   readonly now?: () => number;
+  /**
+   * Resolves once GitHub's React code has taken over the prerendered header, see
+   * `whenPageSettled`. Inserting earlier makes React redraw the whole header. Defaults to now.
+   */
+  readonly settled?: Promise<void>;
 }
 
 /**
@@ -42,7 +47,9 @@ export interface HeaderPinsOptions {
 export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
   const { document, window, data, store } = options;
   const now = options.now ?? Date.now;
+  const settled = options.settled ?? Promise.resolve();
   let running = false;
+  let ready = false;
   /** Bumped by `start` and `stop`, async results of an older run are dropped. */
   let generation = 0;
   let settings: PinsSettings | null = null;
@@ -67,9 +74,7 @@ export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
       }
       return;
     }
-    // While the page still loads, GitHub's prerendered header is about to be taken over by React,
-    // which drops foreign children. Inserting now would make the pins flash and jump.
-    if (settings === null || document.readyState === 'loading') {
+    if (settings === null || !ready) {
       return;
     }
     const slot = findHeaderSlot(document, view?.root ?? null);
@@ -205,7 +210,12 @@ export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
           }
         });
       document.addEventListener('visibilitychange', onVisibilityChange);
-      document.addEventListener('readystatechange', sync);
+      void settled.then(() => {
+        if (run === generation) {
+          ready = true;
+          sync();
+        }
+      });
       observer = new window.MutationObserver(sync);
       observer.observe(document, { childList: true, subtree: true });
       sync();
@@ -221,7 +231,7 @@ export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
       unsubscribe?.();
       unsubscribe = null;
       document.removeEventListener('visibilitychange', onVisibilityChange);
-      document.removeEventListener('readystatechange', sync);
+      ready = false;
       view?.dispose();
       view = null;
       removeTraces(null);
