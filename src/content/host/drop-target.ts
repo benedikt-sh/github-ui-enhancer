@@ -16,40 +16,34 @@ export interface DropCandidate {
   readonly box: Box;
 }
 
-/** `x` means the item shares its row with another column, so before/after is left/right. */
-export type DropAxis = 'x' | 'y';
-
 export interface DropTarget<C extends DropCandidate> {
   readonly candidate: C;
   readonly side: DropSide;
-  readonly axis: DropAxis;
 }
 
-/** Items narrower than this share of the grid sit in one of its columns. */
-const COLUMN_SHARE = 0.75;
+/**
+ * Horizontal distance counts this many times. Below the end of a short column the pointer
+ * then still targets that column instead of a taller neighbor that happens to be closer.
+ */
+const HORIZONTAL_WEIGHT = 8;
 
 function distance(point: Point, box: Box): number {
   return Math.hypot(
-    Math.max(box.left - point.x, 0, point.x - box.right),
+    HORIZONTAL_WEIGHT * Math.max(box.left - point.x, 0, point.x - box.right),
     Math.max(box.top - point.y, 0, point.y - box.bottom),
   );
 }
 
-function sideOn(axis: DropAxis, point: Point, box: Box): DropSide {
-  const [position, start, end] =
-    axis === 'x' ? [point.x, box.left, box.right] : [point.y, box.top, box.bottom];
-  return position < (start + end) / 2 ? 'before' : 'after';
-}
-
 /**
  * Finds where an item would land for a pointer position. Candidates are the grid items in
- * layout order, including the dragged one. The item under the pointer wins, otherwise the
- * nearest one. Pointers above or below all items drop at the start or the end.
+ * layout order, including the dragged one. Items flow like masonry, so there are no rows:
+ * the item under the pointer wins, otherwise the nearest one, preferring the pointer's
+ * column. The pointer's half of it picks before or after. Pointers above or below all items
+ * drop at the start or the end.
  */
 export function findDropTarget<C extends DropCandidate>(
   point: Point,
   candidates: readonly C[],
-  gridWidth: number,
 ): DropTarget<C> | null {
   const first = candidates[0];
   const last = candidates.at(-1);
@@ -57,24 +51,22 @@ export function findDropTarget<C extends DropCandidate>(
     return null;
   }
   if (point.y < Math.min(...candidates.map((candidate) => candidate.box.top))) {
-    return { candidate: first, side: 'before', axis: 'y' };
+    return { candidate: first, side: 'before' };
   }
   if (point.y > Math.max(...candidates.map((candidate) => candidate.box.bottom))) {
-    return { candidate: last, side: 'after', axis: 'y' };
+    return { candidate: last, side: 'after' };
   }
-  // Items in the pointer's row win, so an empty cell next to an item still targets that item.
-  const row = candidates.filter(({ box }) => box.top <= point.y && point.y <= box.bottom);
   let nearest = first;
   let nearestDistance = Number.POSITIVE_INFINITY;
-  for (const candidate of row.length > 0 ? row : candidates) {
+  for (const candidate of candidates) {
     const value = distance(point, candidate.box);
     if (value < nearestDistance) {
       nearest = candidate;
       nearestDistance = value;
     }
   }
-  const axis = nearest.box.right - nearest.box.left < gridWidth * COLUMN_SHARE ? 'x' : 'y';
-  return { candidate: nearest, side: sideOn(axis, point, nearest.box), axis };
+  const { top, bottom } = nearest.box;
+  return { candidate: nearest, side: point.y < (top + bottom) / 2 ? 'before' : 'after' };
 }
 
 export const AUTO_SCROLL_EDGE = 48;

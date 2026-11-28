@@ -16,12 +16,11 @@ interface Item extends DropCandidate {
 interface Hit {
   readonly id: string;
   readonly side: string;
-  readonly axis: string;
 }
 
-function hitAt(x: number, y: number, items: readonly Item[], width: number): Hit | null {
-  const target = findDropTarget({ x, y }, items, width);
-  return target && { id: target.candidate.id, side: target.side, axis: target.axis };
+function hitAt(x: number, y: number, items: readonly Item[]): Hit | null {
+  const target = findDropTarget({ x, y }, items);
+  return target && { id: target.candidate.id, side: target.side };
 }
 
 const box = (left: number, top: number, width: number, height: number): Box => ({
@@ -32,64 +31,62 @@ const box = (left: number, top: number, width: number, height: number): Box => (
 });
 
 /*
- * Two column grid, 1000px wide with a 20px gap:
- *   a (half) | b (half)      y 0-100
- *   c (full)                 y 120-220
- *   d (half)                 y 240-340
+ * Masonry in a 1000px grid with a 20px gap, c moved up below b:
+ *   a (half, tall) | b (half)   a y 0-300, b y 0-100
+ *                  | c (half)   c y 120-200
+ *   d (full)                    y 320-420
+ *   e (half)                    y 440-540
  */
 const grid: Item[] = [
-  { id: 'a', box: box(0, 0, 490, 100) },
+  { id: 'a', box: box(0, 0, 490, 300) },
   { id: 'b', box: box(510, 0, 490, 100) },
-  { id: 'c', box: box(0, 120, 1000, 100) },
-  { id: 'd', box: box(0, 240, 490, 100) },
+  { id: 'c', box: box(510, 120, 490, 80) },
+  { id: 'd', box: box(0, 320, 1000, 100) },
+  { id: 'e', box: box(0, 440, 490, 100) },
 ];
 
-const at = (x: number, y: number): Hit | null => hitAt(x, y, grid, 1000);
+const at = (x: number, y: number): Hit | null => hitAt(x, y, grid);
 
 describe('findDropTarget', () => {
   it('returns null without candidates', () => {
-    assert.equal(findDropTarget({ x: 0, y: 0 }, [], 1000), null);
+    assert.equal(findDropTarget({ x: 0, y: 0 }, []), null);
   });
 
-  it('uses left and right halves of items in a column', () => {
-    assert.deepEqual(at(100, 50), { id: 'a', side: 'before', axis: 'x' });
-    assert.deepEqual(at(400, 50), { id: 'a', side: 'after', axis: 'x' });
-    assert.deepEqual(at(600, 50), { id: 'b', side: 'before', axis: 'x' });
-    assert.deepEqual(at(900, 90), { id: 'b', side: 'after', axis: 'x' });
+  it('uses the top and bottom halves of the item under the pointer', () => {
+    assert.deepEqual(at(100, 50), { id: 'a', side: 'before' });
+    assert.deepEqual(at(400, 250), { id: 'a', side: 'after' });
+    assert.deepEqual(at(600, 40), { id: 'b', side: 'before' });
+    assert.deepEqual(at(900, 190), { id: 'c', side: 'after' });
+    assert.deepEqual(at(800, 330), { id: 'd', side: 'before' });
+    assert.deepEqual(at(100, 410), { id: 'd', side: 'after' });
   });
 
-  it('uses top and bottom halves of full width items', () => {
-    assert.deepEqual(at(800, 130), { id: 'c', side: 'before', axis: 'y' });
-    assert.deepEqual(at(100, 210), { id: 'c', side: 'after', axis: 'y' });
+  it('prefers the pointer column below a short column', () => {
+    assert.deepEqual(at(520, 220), { id: 'c', side: 'after' });
+    assert.deepEqual(at(520, 290), { id: 'd', side: 'before' });
+    assert.deepEqual(at(800, 500), { id: 'd', side: 'after' });
   });
 
-  it('picks the nearest item for pointers in gaps and empty cells', () => {
-    assert.deepEqual(at(500, 50), { id: 'a', side: 'after', axis: 'x' });
-    assert.deepEqual(at(505, 50), { id: 'b', side: 'before', axis: 'x' });
-    assert.deepEqual(at(800, 112), { id: 'c', side: 'before', axis: 'y' });
-    assert.deepEqual(at(800, 300), { id: 'd', side: 'after', axis: 'x' });
+  it('picks the nearest item in gaps', () => {
+    assert.deepEqual(at(600, 105), { id: 'b', side: 'after' });
+    assert.deepEqual(at(600, 115), { id: 'c', side: 'before' });
+    assert.deepEqual(at(495, 50), { id: 'a', side: 'before' });
+    assert.deepEqual(at(505, 60), { id: 'b', side: 'after' });
+    assert.deepEqual(at(495, 430), { id: 'd', side: 'after' });
   });
 
   it('drops at the start or the end beyond all items', () => {
-    assert.deepEqual(at(900, -40), { id: 'a', side: 'before', axis: 'y' });
-    assert.deepEqual(at(900, 400), { id: 'd', side: 'after', axis: 'y' });
+    assert.deepEqual(at(900, -40), { id: 'a', side: 'before' });
+    assert.deepEqual(at(900, 600), { id: 'e', side: 'after' });
   });
 
-  it('stacks half width items vertically in a single column', () => {
+  it('stacks items vertically in a single column', () => {
     const column: Item[] = [
       { id: 'a', box: box(0, 0, 600, 100) },
       { id: 'b', box: box(0, 120, 600, 100) },
     ];
-    assert.deepEqual(hitAt(10, 130, column, 600), {
-      id: 'b',
-      side: 'before',
-      axis: 'y',
-    });
-    assert.deepEqual(hitAt(590, 90, column, 600), {
-      id: 'a',
-      side: 'after',
-      axis: 'y',
-    });
+    assert.deepEqual(hitAt(10, 130, column), { id: 'b', side: 'before' });
+    assert.deepEqual(hitAt(590, 90, column), { id: 'a', side: 'after' });
   });
 });
 

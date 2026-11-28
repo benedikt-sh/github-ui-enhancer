@@ -184,30 +184,13 @@
   pointer-events: none;
 }
 
-/* Centered in the 16px grid gap. */
+/* Centered in the gap of at least 16px between items of a column. */
 .ghx-host-item--drop-before::after {
   top: -10px;
 }
 
 .ghx-host-item--drop-after::after {
   bottom: -10px;
-}
-
-.ghx-host-item--drop-inline::after {
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  height: auto;
-}
-
-.ghx-host-item--drop-inline.ghx-host-item--drop-before::after {
-  right: auto;
-  left: -10px;
-}
-
-.ghx-host-item--drop-inline.ghx-host-item--drop-after::after {
-  right: -10px;
-  left: auto;
 }
 
 .ghx-host-status {

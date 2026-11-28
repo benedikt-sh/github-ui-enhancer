@@ -763,7 +763,7 @@ describe('createDashboardHost drag and drop', () => {
     drag(root, 'c', 300, 350, false);
     assert.ok(itemElement(root, 'c').classList.contains(DRAGGING_CLASS));
     assert.ok(itemElement(root, 'a').classList.contains(DROP_AFTER_CLASS));
-    pointer(header(root, 'c'), 'pointerup', 20, 350);
+    pointer(header(root, 'c'), 'pointerup', 20, 310);
     await flush();
     assert.deepEqual(itemIds(root), ['c', 'a', 'b']);
     assert.equal(widgets.list.mounts.length, 3);
@@ -800,7 +800,7 @@ describe('createDashboardHost drag and drop', () => {
     assert.deepEqual(itemIds(root), ['a', 'b', 'c']);
     assert.deepEqual(area.snapshot(), before);
     widgets.list.forms[0]?.context.cancel();
-    drag(root, 'a', 900, 450);
+    drag(root, 'a', 900, 600);
     await flush();
     assert.deepEqual(itemIds(root), ['b', 'c', 'a']);
   });

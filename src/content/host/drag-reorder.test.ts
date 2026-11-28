@@ -10,7 +10,6 @@ import {
   DRAGGING_CLASS,
   DROP_AFTER_CLASS,
   DROP_BEFORE_CLASS,
-  DROP_INLINE_CLASS,
   GRID_DRAGGING_CLASS,
 } from './drag-reorder.ts';
 import type { DragReorder, DragReorderOptions } from './drag-reorder.ts';
@@ -136,9 +135,7 @@ function startDrag(context: Setup, id: 'a' | 'b' | 'c', x = 50, y = 150): HTMLEl
 }
 
 const dropClasses = (element: HTMLElement): string[] =>
-  [DROP_BEFORE_CLASS, DROP_AFTER_CLASS, DROP_INLINE_CLASS].filter((name) =>
-    element.classList.contains(name),
-  );
+  [DROP_BEFORE_CLASS, DROP_AFTER_CLASS].filter((name) => element.classList.contains(name));
 
 describe('createDragReorder', () => {
   it('treats a press without movement as a click', () => {
@@ -154,7 +151,7 @@ describe('createDragReorder', () => {
     assert.equal(context.drag.dragging, false);
   });
 
-  it('lifts the item and drops it beside another half width item', () => {
+  it('lifts the item and drops it on another half width item', () => {
     const context = setup();
     const handle = startDrag(context, 'a');
     assert.equal(context.drag.dragging, true);
@@ -164,7 +161,7 @@ describe('createDragReorder', () => {
 
     const move = pointer(handle, 'pointermove', { x: 900, y: 150 });
     assert.equal(move.defaultPrevented, true);
-    assert.deepEqual(dropClasses(context.items.b), [DROP_AFTER_CLASS, DROP_INLINE_CLASS]);
+    assert.deepEqual(dropClasses(context.items.b), [DROP_AFTER_CLASS]);
 
     pointer(handle, 'pointerup', { x: 900, y: 150 });
     assert.deepEqual(context.drops, ['a after b']);
@@ -175,14 +172,14 @@ describe('createDragReorder', () => {
     assert.equal(handle.hasPointerCapture(1), false);
   });
 
-  it('moves the indicator between items and uses top and bottom for full width items', () => {
+  it('moves the indicator between items', () => {
     const context = setup();
     const handle = startDrag(context, 'a');
     pointer(handle, 'pointermove', { x: 500, y: 300 });
     assert.deepEqual(dropClasses(context.items.c), [DROP_AFTER_CLASS]);
     pointer(handle, 'pointermove', { x: 500, y: 230 });
     assert.deepEqual(dropClasses(context.items.c), [DROP_BEFORE_CLASS]);
-    pointer(handle, 'pointermove', { x: 600, y: 150 });
+    pointer(handle, 'pointermove', { x: 600, y: 120 });
     assert.deepEqual(dropClasses(context.items.c), []);
     assert.deepEqual(dropClasses(context.items.b), [], 'before b keeps a where it is');
     pointer(handle, 'pointerup', { x: 500, y: 230 });
@@ -192,7 +189,7 @@ describe('createDragReorder', () => {
   it('drops a later item before an earlier one', () => {
     const context = setup();
     const handle = startDrag(context, 'c', 50, 270);
-    pointer(handle, 'pointerup', { x: 20, y: 150 });
+    pointer(handle, 'pointerup', { x: 20, y: 120 });
     assert.deepEqual(context.drops, ['c before a']);
   });
 

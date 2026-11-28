@@ -9,8 +9,6 @@ export const GRID_DRAGGING_CLASS = 'ghx-host-grid--dragging';
 export const DRAGGING_CLASS = 'ghx-host-item--dragging';
 export const DROP_BEFORE_CLASS = 'ghx-host-item--drop-before';
 export const DROP_AFTER_CLASS = 'ghx-host-item--drop-after';
-/** Added next to the before/after class when the indicator belongs at the left or right edge. */
-export const DROP_INLINE_CLASS = 'ghx-host-item--drop-inline';
 
 /** Pixels the pointer has to travel before a press on a handle becomes a drag. */
 export const DRAG_THRESHOLD = 4;
@@ -189,11 +187,7 @@ export function createDragReorder(options: DragReorderOptions): DragReorder {
       ...entry,
       box: entry.element.getBoundingClientRect(),
     }));
-    const target = findDropTarget(
-      { x: drag.x, y: drag.y },
-      placed,
-      grid.getBoundingClientRect().width,
-    );
+    const target = findDropTarget({ x: drag.x, y: drag.y }, placed);
     const moves =
       target !== null &&
       placeBeside(placed, (entry) => entry.id, drag.id, target.candidate.id, target.side) !== null;
@@ -201,16 +195,12 @@ export function createDragReorder(options: DragReorderOptions): DragReorder {
   }
 
   function showTarget(drag: Gesture, target: DropTarget<Placed> | null): void {
-    drag.target?.candidate.element.classList.remove(
-      DROP_BEFORE_CLASS,
-      DROP_AFTER_CLASS,
-      DROP_INLINE_CLASS,
-    );
+    drag.target?.candidate.element.classList.remove(DROP_BEFORE_CLASS, DROP_AFTER_CLASS);
     drag.target = target;
     if (target !== null) {
-      const { classList } = target.candidate.element;
-      classList.add(target.side === 'before' ? DROP_BEFORE_CLASS : DROP_AFTER_CLASS);
-      classList.toggle(DROP_INLINE_CLASS, target.axis === 'x');
+      target.candidate.element.classList.add(
+        target.side === 'before' ? DROP_BEFORE_CLASS : DROP_AFTER_CLASS,
+      );
     }
   }
 
