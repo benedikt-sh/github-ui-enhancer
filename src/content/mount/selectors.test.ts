@@ -3,15 +3,20 @@ import { after, before, describe, it } from 'node:test';
 
 import { installDom } from '../../../test/dom.ts';
 import type { DomEnvironment } from '../../../test/dom.ts';
+import { renderFileList } from '../file-icons/file-list.fixture.ts';
 import { renderPage } from './github-page.fixture.ts';
 import {
+  fileListCellOf,
   findChangelogWidgets,
+  findFileListCells,
   findHeaderSlot,
   findMountPoint,
   isInHeaderSlot,
   isLoggedIn,
+  isRepositoryCodePath,
   isStartPath,
   pageLogin,
+  readFileListEntry,
 } from './selectors.ts';
 
 describe('selectors', () => {
@@ -301,5 +306,102 @@ describe('findHeaderSlot', () => {
 
     document.body.append(pins);
     assert.equal(isInHeaderSlot(pins), false);
+  });
+});
+
+describe('isRepositoryCodePath', () => {
+  it('accepts repository home and tree pages', () => {
+    assert.equal(isRepositoryCodePath('/octo/repo'), true);
+    assert.equal(isRepositoryCodePath('/octo/repo/'), true);
+    assert.equal(isRepositoryCodePath('/octo/repo/tree/main'), true);
+    assert.equal(isRepositoryCodePath('/octo/repo/tree/feature/x/src'), true);
+  });
+
+  it('rejects other pages', () => {
+    assert.equal(isRepositoryCodePath('/'), false);
+    assert.equal(isRepositoryCodePath('/octo'), false);
+    assert.equal(isRepositoryCodePath('/octo/repo/blob/main/a.ts'), false);
+    assert.equal(isRepositoryCodePath('/octo/repo/tree'), false);
+    assert.equal(isRepositoryCodePath('/octo/repo/pulls'), false);
+    assert.equal(isRepositoryCodePath('/orgs/octo'), false);
+    assert.equal(isRepositoryCodePath('/settings/profile'), false);
+    assert.equal(isRepositoryCodePath('/Marketplace/actions'), false);
+  });
+});
+
+describe('file list', () => {
+  let dom: DomEnvironment;
+  before(() => {
+    dom = installDom();
+  });
+  after(() => dom.cleanup());
+
+  it('finds both name cells of every row', () => {
+    renderFileList(document, [{ name: 'src', kind: 'directory' }, { name: 'a.ts' }], {
+      parentRow: true,
+    });
+
+    const cells = findFileListCells(document);
+    assert.equal(cells.length, 4);
+    assert.ok(cells.every((cell) => cell.classList.contains('react-directory-filename-column')));
+  });
+
+  it('includes the root itself and finds cells by the table label as fallback', () => {
+    document.body.innerHTML = `
+      <table aria-labelledby="folders-and-files"><tr><td><div id="cell">
+        <svg class="octicon octicon-file"></svg><a href="/o/r/blob/main/x.md">x.md</a>
+      </div></td></tr></table>`;
+    const cell = document.getElementById('cell');
+    assert.ok(cell !== null);
+
+    assert.deepEqual(findFileListCells(cell), [cell]);
+    assert.deepEqual(findFileListCells(document), [cell]);
+    assert.equal(readFileListEntry(cell)?.path, '/o/r/blob/main/x.md');
+
+    document.body.innerHTML = '<main><table><tr><td><div></div></td></tr></table></main>';
+    assert.deepEqual(findFileListCells(document), []);
+  });
+
+  it('maps mutated nodes to their cell', () => {
+    renderFileList(document, [{ name: 'a.ts' }]);
+    const link = document.querySelector('.react-directory-row-name-cell-large-screen a');
+    assert.ok(link !== null);
+    const cell = link.closest('.react-directory-filename-column');
+
+    assert.equal(fileListCellOf(link), cell);
+    assert.equal(fileListCellOf(link.firstChild ?? link), cell);
+    assert.equal(fileListCellOf(document.body), null);
+    assert.equal(fileListCellOf(document), null);
+  });
+
+  it('reads icon and decoded path of file cells', () => {
+    renderFileList(document, [
+      { name: 'a b.ts', href: '/octo/repo/blob/main/.github/a%20b.ts?plain=1#L1' },
+    ]);
+    const [cell] = findFileListCells(document);
+    assert.ok(cell !== undefined);
+
+    const entry = readFileListEntry(cell);
+    assert.equal(entry?.path, '/octo/repo/blob/main/.github/a b.ts');
+    assert.equal(entry?.icon, cell.querySelector('svg.octicon-file'));
+  });
+
+  it('keeps undecodable paths as they are', () => {
+    renderFileList(document, [{ name: 'x', href: '/octo/repo/blob/main/100%.md' }]);
+    const [cell] = findFileListCells(document);
+    assert.ok(cell !== undefined);
+
+    assert.equal(readFileListEntry(cell)?.path, '/octo/repo/blob/main/100%.md');
+  });
+
+  it('skips folders, submodules, symlinks and cells without link', () => {
+    renderFileList(document, [
+      { name: 'src', kind: 'directory' },
+      { name: 'vendor', kind: 'submodule' },
+      { name: 'link.md', kind: 'symlink' },
+      { name: 'plain.md', href: null },
+    ]);
+
+    assert.deepEqual(findFileListCells(document).map(readFileListEntry), Array(8).fill(null));
   });
 });

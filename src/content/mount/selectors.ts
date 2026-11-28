@@ -186,3 +186,103 @@ export function findHeaderSlot(document: Document, exclude: Element | null): Hea
 export function isInHeaderSlot(element: Element): boolean {
   return element.isConnected && element.parentElement?.matches(HEADER_SLOT_PARENTS) === true;
 }
+
+/**
+ * First path segments of github.com pages that look like `/owner/repo` but are not
+ * repositories. Pages without a file list stay untouched anyway, this only saves the work.
+ */
+const NON_REPOSITORY_OWNERS = new Set([
+  'about',
+  'account',
+  'apps',
+  'codespaces',
+  'collections',
+  'enterprises',
+  'explore',
+  'features',
+  'issues',
+  'marketplace',
+  'notifications',
+  'orgs',
+  'organizations',
+  'pulls',
+  'search',
+  'settings',
+  'sponsors',
+  'topics',
+  'users',
+]);
+
+/** The repository home page (`/owner/repo`) and directory pages (`/owner/repo/tree/ref/...`). */
+export function isRepositoryCodePath(pathname: string): boolean {
+  const segments = pathname.split('/').filter((segment) => segment !== '');
+  const [owner, , view] = segments;
+  if (owner === undefined || NON_REPOSITORY_OWNERS.has(owner.toLowerCase())) {
+    return false;
+  }
+  return segments.length === 2 || (segments.length >= 4 && view === 'tree');
+}
+
+/**
+ * Name cells of GitHub's React directory table (`table[aria-labelledby="folders-and-files"]`).
+ * Each `tr.react-directory-row` has the cell twice, for small and large screens, and CSS shows
+ * one of them. A cell is a flex row with the octicon followed by a wrapper around the name
+ * link. Tried in order, the second selector keeps working if the class names change but the
+ * table label stays. It also matches the commit cells, which `readFileListEntry` skips.
+ */
+export const FILE_LIST_CELL_SELECTORS = [
+  'tr.react-directory-row .react-directory-filename-column',
+  'table[aria-labelledby="folders-and-files"] td > div',
+] as const;
+
+/** GitHub's generic file icon. Folders, submodules and symlinks use other `octicon-file-*`. */
+export const FILE_LIST_FILE_ICON = 'svg.octicon-file';
+
+const FILE_LIST_CELL = FILE_LIST_CELL_SELECTORS.join(', ');
+const ELEMENT_NODE = 1;
+
+export interface FileListEntry {
+  /** GitHub's file icon, a direct child of the cell. */
+  readonly icon: Element;
+  /** Decoded path of the name link, e.g. `/owner/repo/blob/main/src/index.ts`. */
+  readonly path: string;
+}
+
+/** Cells inside `root` and `root` itself, found by the first selector that matches any. */
+export function findFileListCells(root: ParentNode): Element[] {
+  for (const selector of FILE_LIST_CELL_SELECTORS) {
+    const cells = [...root.querySelectorAll(selector)];
+    if (isElement(root) && root.matches(selector)) {
+      cells.unshift(root);
+    }
+    if (cells.length > 0) {
+      return cells;
+    }
+  }
+  return [];
+}
+
+/** The cell a node belongs to, for nodes reported by a MutationObserver. */
+export function fileListCellOf(node: Node): Element | null {
+  const element = isElement(node) ? node : node.parentElement;
+  return element?.closest(FILE_LIST_CELL) ?? null;
+}
+
+/** `null` unless the cell shows a file with GitHub's generic icon and a link. */
+export function readFileListEntry(cell: Element): FileListEntry | null {
+  const icon = [...cell.children].find((child) => child.matches(FILE_LIST_FILE_ICON));
+  const href = cell.querySelector('a[href]')?.getAttribute('href') ?? null;
+  if (icon === undefined || href === null) {
+    return null;
+  }
+  const pathname = href.split(/[?#]/, 1)[0] ?? '';
+  try {
+    return { icon, path: decodeURIComponent(pathname) };
+  } catch {
+    return { icon, path: pathname };
+  }
+}
+
+function isElement(node: Node): node is Element {
+  return node.nodeType === ELEMENT_NODE;
+}
