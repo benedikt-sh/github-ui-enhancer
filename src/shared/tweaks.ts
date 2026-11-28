@@ -17,6 +17,16 @@ export const TWEAK_AREAS = [
     title: 'Header bar',
     description: 'The bar at the top of every GitHub page.',
   },
+  {
+    id: 'repository',
+    title: 'Repository pages',
+    description: 'File lists and other views inside a repository.',
+  },
+  {
+    id: 'navigation',
+    title: 'Navigation',
+    description: 'Ways to get around GitHub quickly.',
+  },
 ] as const satisfies readonly TweakArea[];
 
 export type TweakAreaId = (typeof TWEAK_AREAS)[number]['id'];
@@ -52,6 +62,20 @@ export const TWEAKS = [
       'Show pinned repositories, and optionally the one you were active in most recently, ' +
       'as quick links in the header bar.',
     defaultValue: false,
+  },
+  {
+    id: 'repository.fileIcons',
+    area: 'repository',
+    title: 'File type icons',
+    description: 'Show icons for known file types and tools next to files in the file list.',
+    defaultValue: true,
+  },
+  {
+    id: 'navigation.quickSwitcher',
+    area: 'navigation',
+    title: 'Repo quick switcher',
+    description: 'Press Shift twice to search and open any of your repositories.',
+    defaultValue: true,
   },
 ] as const satisfies readonly TweakDefinition[];
 

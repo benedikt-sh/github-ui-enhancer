@@ -9,6 +9,8 @@ describe('tweaks', () => {
       'dashboard.enhanced': true,
       'dashboard.hideChangelog': false,
       'header.pinnedRepos': false,
+      'repository.fileIcons': true,
+      'navigation.quickSwitcher': true,
     });
   });
 
@@ -19,6 +21,8 @@ describe('tweaks', () => {
         'dashboard.enhanced': false,
         'dashboard.hideChangelog': false,
         'header.pinnedRepos': false,
+        'repository.fileIcons': true,
+        'navigation.quickSwitcher': true,
       },
     );
     assert.deepEqual(parseTweaks([true]), defaultTweaks());
@@ -39,6 +43,14 @@ describe('tweaks', () => {
     assert.deepEqual(
       tweaksOfArea('header').map((tweak) => tweak.id),
       ['header.pinnedRepos'],
+    );
+    assert.deepEqual(
+      tweaksOfArea('repository').map((tweak) => tweak.id),
+      ['repository.fileIcons'],
+    );
+    assert.deepEqual(
+      tweaksOfArea('navigation').map((tweak) => tweak.id),
+      ['navigation.quickSwitcher'],
     );
   });
 });

@@ -25,6 +25,8 @@ describe('applyTweaks', () => {
         'dashboard.enhanced': true,
         'dashboard.hideChangelog': false,
         'header.pinnedRepos': false,
+        'repository.fileIcons': true,
+        'navigation.quickSwitcher': true,
       },
       targets,
     );
@@ -33,6 +35,8 @@ describe('applyTweaks', () => {
         'dashboard.enhanced': false,
         'dashboard.hideChangelog': true,
         'header.pinnedRepos': true,
+        'repository.fileIcons': false,
+        'navigation.quickSwitcher': false,
       },
       targets,
     );
