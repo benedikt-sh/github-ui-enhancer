@@ -178,7 +178,12 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     const fullName = repoFullName(repo);
     return h(
       'li',
-      { className: 'ghx-header-pins__entry', dataset: { repoKey: repoKey(repo) } },
+      {
+        className: 'ghx-header-pins__entry',
+        dataset: { repoKey: repoKey(repo), pinIndex: String(index) },
+        title: 'Drag to change the order',
+      },
+      icon('grabber', { className: 'ghx-header-pins__grabber' }),
       icon('repo'),
       h('a', { className: 'ghx-header-pins__entry-link', href: repoUrl(repo) }, fullName),
       moveButton(repo, index, 'up'),
@@ -328,14 +333,23 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     }
   }
 
-  const detachDrag = attachPinDrag({
+  const moveByIndex = (from: number, to: number): void => {
+    const repo = state?.settings.repos[from];
+    if (repo !== undefined) {
+      options.onMove(repo, to);
+    }
+  };
+  const detachBarDrag = attachPinDrag({ document, list, onMove: moveByIndex });
+  const detachPanelDrag = attachPinDrag({
     document,
-    list,
-    onMove: (from, to) => {
-      const repo = state?.settings.repos[from];
-      if (repo !== undefined) {
-        options.onMove(repo, to);
-      }
+    list: entries,
+    onMove: moveByIndex,
+    axis: 'y',
+    classes: {
+      list: 'ghx-header-pins__entries--dragging',
+      item: 'ghx-header-pins__entry--dragging',
+      dropBefore: 'ghx-header-pins__entry--drop-before',
+      dropAfter: 'ghx-header-pins__entry--drop-after',
     },
   });
 
@@ -346,7 +360,8 @@ export function createHeaderPinsView(options: HeaderPinsViewOptions): HeaderPins
     open,
     close,
     dispose: () => {
-      detachDrag();
+      detachBarDrag();
+      detachPanelDrag();
       close();
     },
   };

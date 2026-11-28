@@ -120,4 +120,42 @@ describe('attachPinDrag', () => {
 
     assert.deepEqual(moves, []);
   });
+
+  it('works vertically with own classes and never starts on buttons', () => {
+    detach();
+    document.body.innerHTML = `<ul id="panel">
+      <li data-pin-index="0"><a id="p0">a</a><button id="b0">x</button></li>
+      <li data-pin-index="1"><a id="p1">b</a></li></ul>`;
+    const panel = document.getElementById('panel');
+    assert.ok(panel !== null);
+    [...panel.children].forEach((child, index) => {
+      child.getBoundingClientRect = () => ({ top: index * 40, height: 32 }) as DOMRect;
+    });
+    const moved: [number, number][] = [];
+    const stop = attachPinDrag({
+      document,
+      list: panel,
+      onMove: (from, to) => moved.push([from, to]),
+      axis: 'y',
+      classes: { list: 'l', item: 'i', dropBefore: 'b', dropAfter: 'a' },
+    });
+    const press = (type: string, y: number, target: EventTarget = document): void => {
+      const init = { clientX: 0, clientY: y, button: 0, bubbles: true };
+      target.dispatchEvent(new MouseEvent(type, init));
+    };
+
+    press('pointerdown', 10, document.getElementById('b0') ?? document);
+    press('pointermove', 80);
+    press('pointerup', 80);
+    assert.deepEqual(moved, []);
+
+    press('pointerdown', 10, document.getElementById('p0') ?? document);
+    press('pointermove', 80);
+    assert.ok(panel.classList.contains('l'));
+    assert.ok(panel.children[1]?.classList.contains('a'));
+    press('pointerup', 80);
+    assert.deepEqual(moved, [[0, 1]]);
+    stop();
+  });
 });
+

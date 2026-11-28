@@ -7,16 +7,36 @@ export const ITEM_DRAGGING_CLASS = 'ghx-header-pins__item--dragging';
 export const DROP_BEFORE_CLASS = 'ghx-header-pins__item--drop-before';
 export const DROP_AFTER_CLASS = 'ghx-header-pins__item--drop-after';
 
-/** Position among the other pins, given their horizontal centers in order. */
-export function dropIndex(centers: readonly number[], x: number): number {
-  return centers.filter((center) => center < x).length;
+/** Controls inside an item keep their own behavior and never start a drag. */
+const INTERACTIVE = 'button, input, select, textarea';
+
+/** Position among the other pins, given their centers along the drag axis in order. */
+export function dropIndex(centers: readonly number[], position: number): number {
+  return centers.filter((center) => center < position).length;
 }
+
+export interface PinDragClasses {
+  readonly list: string;
+  readonly item: string;
+  readonly dropBefore: string;
+  readonly dropAfter: string;
+}
+
+const BAR_CLASSES: PinDragClasses = {
+  list: DRAGGING_CLASS,
+  item: ITEM_DRAGGING_CLASS,
+  dropBefore: DROP_BEFORE_CLASS,
+  dropAfter: DROP_AFTER_CLASS,
+};
 
 export interface PinDragOptions {
   readonly document: Document;
   /** The list holding the pins; pinned items carry `data-pin-index`. */
   readonly list: HTMLElement;
   readonly onMove: (from: number, to: number) => void;
+  /** `x` for the header bar (default), `y` for the vertical list in the panel. */
+  readonly axis?: 'x' | 'y';
+  readonly classes?: PinDragClasses;
 }
 
 interface Gesture {
@@ -31,6 +51,8 @@ interface Gesture {
 /** Lets the user reorder pins by dragging them along the header bar. Returns a dispose. */
 export function attachPinDrag(options: PinDragOptions): () => void {
   const { document, list } = options;
+  const axis = options.axis ?? 'x';
+  const classes = options.classes ?? BAR_CLASSES;
   let gesture: Gesture | null = null;
   /** Set after a drag: the release over a pin link would otherwise open that repository. */
   let swallowClick = false;
@@ -41,14 +63,21 @@ export function attachPinDrag(options: PinDragOptions): () => void {
 
   function clearIndicators(): void {
     for (const item of pinnedItems()) {
-      item.classList.remove(DROP_BEFORE_CLASS, DROP_AFTER_CLASS);
+      item.classList.remove(classes.dropBefore, classes.dropAfter);
     }
   }
 
   function onPointerDown(event: PointerEvent): void {
-    const item = event.target instanceof Element ? event.target.closest(ITEM_SELECTOR) : null;
+    const target = event.target instanceof Element ? event.target : null;
+    const item = target?.closest(ITEM_SELECTOR) ?? null;
     swallowClick = false;
-    if (event.button !== 0 || !(item instanceof HTMLElement) || gesture !== null) {
+    if (
+      event.button !== 0 ||
+      !(item instanceof HTMLElement) ||
+      !list.contains(item) ||
+      target?.closest(INTERACTIVE) != null ||
+      gesture !== null
+    ) {
       return;
     }
     gesture = {
@@ -79,21 +108,21 @@ export function attachPinDrag(options: PinDragOptions): () => void {
     }
     if (!gesture.dragging) {
       gesture.dragging = true;
-      list.classList.add(DRAGGING_CLASS);
-      gesture.item.classList.add(ITEM_DRAGGING_CLASS);
+      list.classList.add(classes.list);
+      gesture.item.classList.add(classes.item);
     }
     const others = pinnedItems().filter((item) => item !== gesture?.item);
     const centers = others.map((item) => {
       const rect = item.getBoundingClientRect();
-      return rect.left + rect.width / 2;
+      return axis === 'x' ? rect.left + rect.width / 2 : rect.top + rect.height / 2;
     });
-    gesture.to = dropIndex(centers, event.clientX);
+    gesture.to = dropIndex(centers, axis === 'x' ? event.clientX : event.clientY);
     clearIndicators();
     const before = others[gesture.to];
     if (before !== undefined) {
-      before.classList.add(DROP_BEFORE_CLASS);
+      before.classList.add(classes.dropBefore);
     } else {
-      others.at(-1)?.classList.add(DROP_AFTER_CLASS);
+      others.at(-1)?.classList.add(classes.dropAfter);
     }
   }
 
@@ -123,8 +152,8 @@ export function attachPinDrag(options: PinDragOptions): () => void {
     document.removeEventListener('pointerup', onPointerUp);
     document.removeEventListener('pointercancel', cancel);
     document.removeEventListener('keydown', onKeyDown, true);
-    list.classList.remove(DRAGGING_CLASS);
-    finished?.item.classList.remove(ITEM_DRAGGING_CLASS);
+    list.classList.remove(classes.list);
+    finished?.item.classList.remove(classes.item);
     clearIndicators();
     swallowClick = finished?.dragging === true;
   }

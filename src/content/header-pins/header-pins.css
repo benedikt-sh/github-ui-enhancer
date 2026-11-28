@@ -288,3 +288,32 @@
   touch-action: pan-y;
   user-select: none;
 }
+
+/* Reordering in the panel: the whole entry is the handle, buttons and links keep working. */
+.ghx-header-pins__entry {
+  cursor: grab;
+  touch-action: pan-x;
+  user-select: none;
+}
+
+.ghx-header-pins__grabber {
+  flex: 0 0 auto;
+  color: var(--fgColor-muted, #59636e);
+}
+
+.ghx-header-pins__entries--dragging,
+.ghx-header-pins__entries--dragging * {
+  cursor: grabbing;
+}
+
+.ghx-header-pins__entry--dragging {
+  opacity: 0.5;
+}
+
+.ghx-header-pins__entry--drop-before {
+  box-shadow: 0 -2px 0 var(--fgColor-accent, #0969da);
+}
+
+.ghx-header-pins__entry--drop-after {
+  box-shadow: 0 2px 0 var(--fgColor-accent, #0969da);
+}

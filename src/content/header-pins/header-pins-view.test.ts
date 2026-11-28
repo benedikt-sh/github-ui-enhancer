@@ -333,4 +333,28 @@ describe('createHeaderPinsView', () => {
     assert.equal(click.defaultPrevented, true);
     view.dispose();
   });
+
+  it('reorders pins by dragging the entries in the panel', () => {
+    const { view, moved } = setup();
+    view.update(state([repo('octo', 'alpha'), repo('octo', 'beta')]));
+    view.open();
+    const entries = [...view.root.querySelectorAll<HTMLElement>('.ghx-header-pins__entry')];
+    entries.forEach((entry, index) => {
+      entry.getBoundingClientRect = () => ({ top: index * 40, height: 32 }) as DOMRect;
+    });
+    assert.ok(entries[0]?.querySelector('.ghx-header-pins__grabber'));
+
+    const press = (type: string, y: number, target: EventTarget = document) =>
+      target.dispatchEvent(
+        new MouseEvent(type, { clientX: 5, clientY: y, button: 0, bubbles: true }),
+      );
+    press('pointerdown', 10, entries[1]?.querySelector('a') ?? document);
+    press('pointermove', 0);
+    assert.ok(entries[0]?.classList.contains('ghx-header-pins__entry--drop-before'));
+    press('pointerup', 0);
+
+    assert.deepEqual(moved, [['beta', 0]]);
+    view.dispose();
+  });
 });
+
