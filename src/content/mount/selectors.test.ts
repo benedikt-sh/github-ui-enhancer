@@ -213,6 +213,41 @@ describe('findHeaderSlot', () => {
 
   const START = '<div class="AppHeader-globalBar-start" id="start"><a id="logo"></a></div>';
 
+  // Mirrors the React header observed on github.com in November 2026.
+  const GLOBAL_NAV = `
+    <header class="GlobalNav appHeader__6OmbvL prc-Stack-Stack-UQ9k6"><div>
+      <div class="left__VBt0gv" id="left"><a id="home"></a></div>
+      <div class="center__f1ujjY" id="center">
+        <nav class="contextRegion__Wb1-GR" id="context"></nav>
+        <div class="searchButtonGroup__lia0l0 prc-ButtonGroup-ButtonGroup-vFUrY" id="search"></div>
+      </div>
+      <div class="right__5m36ST rightWithResponsiveCreateButton__JePGAt" id="right">
+        <div id="actions"></div>
+      </div>
+    </div></header>`;
+
+  it('uses the spot in front of the search button of the React header', () => {
+    document.body.innerHTML = GLOBAL_NAV;
+
+    assert.deepEqual(findHeaderSlot(document, null), {
+      parent: document.getElementById('center'),
+      before: document.getElementById('search'),
+    });
+  });
+
+  it('falls back to the right region of the React header', () => {
+    document.body.innerHTML = GLOBAL_NAV;
+    document.getElementById('search')?.remove();
+
+    assert.deepEqual(findHeaderSlot(document, null), {
+      parent: document.getElementById('right'),
+      before: document.getElementById('actions'),
+    });
+    const pins = document.createElement('span');
+    document.getElementById('center')?.append(pins);
+    assert.equal(isInHeaderSlot(pins), true);
+  });
+
   it('prefers the spot in front of the search', () => {
     render(`${START}<div class="AppHeader-globalBar-end" id="end">
       <div id="other"></div><div class="AppHeader-search" id="search"></div></div>`);

@@ -130,11 +130,19 @@ export type HeaderSlotSelector =
   | { readonly parent: string; readonly insert: 'before'; readonly before: string };
 
 /**
- * GitHub's global bar (`header.AppHeader .AppHeader-globalBar`) has a start part with logo and
- * page context and an end part with search, actions and avatar. Both are flex rows, so an extra
- * child in front of the search or behind the page context keeps the layout intact.
+ * GitHub's current header is a React component (`header.GlobalNav`) whose regions only carry
+ * hashed CSS module classes like `center__f1ujjY`, so they are matched by the stable prefix. The
+ * center region holds the page context and the search button. The older server rendered bar
+ * (`header.AppHeader`) is kept as fallback. All regions are flex rows, so an extra child in
+ * front of the search or behind the page context keeps the layout intact.
  */
 export const HEADER_SLOT_SELECTORS = [
+  {
+    parent: 'header.GlobalNav [class*="center__"]',
+    insert: 'before',
+    before: '[class*="searchButtonGroup__"]',
+  },
+  { parent: 'header.GlobalNav [class*="right__"]', insert: 'start' },
   {
     parent: 'header.AppHeader .AppHeader-globalBar-end',
     insert: 'before',
