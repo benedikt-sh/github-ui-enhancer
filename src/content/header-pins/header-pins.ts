@@ -67,7 +67,9 @@ export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
       }
       return;
     }
-    if (settings === null) {
+    // While the page still loads, GitHub's prerendered header is about to be taken over by React,
+    // which drops foreign children. Inserting now would make the pins flash and jump.
+    if (settings === null || document.readyState === 'loading') {
       return;
     }
     const slot = findHeaderSlot(document, view?.root ?? null);
@@ -203,6 +205,7 @@ export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
           }
         });
       document.addEventListener('visibilitychange', onVisibilityChange);
+      document.addEventListener('readystatechange', sync);
       observer = new window.MutationObserver(sync);
       observer.observe(document, { childList: true, subtree: true });
       sync();
@@ -218,6 +221,7 @@ export function createHeaderPins(options: HeaderPinsOptions): Toggleable {
       unsubscribe?.();
       unsubscribe = null;
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener('readystatechange', sync);
       view?.dispose();
       view = null;
       removeTraces(null);

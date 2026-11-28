@@ -210,6 +210,23 @@ describe('createHeaderPins', () => {
     assert.deepEqual(roots(), []);
   });
 
+  it('waits until the page has finished loading before inserting', async () => {
+    const { pins } = setup(stored([repo('octo', 'alpha')]));
+    let state: DocumentReadyState = 'loading';
+    Object.defineProperty(document, 'readyState', { configurable: true, get: () => state });
+    try {
+      pins.start();
+      await flush();
+      assert.deepEqual(roots(), []);
+
+      state = 'interactive';
+      document.dispatchEvent(new Event('readystatechange'));
+      assert.equal(roots().length, 1);
+    } finally {
+      Reflect.deleteProperty(document, 'readyState');
+    }
+  });
+
   it('does not insert anything when stopped while loading', async () => {
     const { pins } = setup(stored([repo('octo', 'alpha')]));
     pins.start();
