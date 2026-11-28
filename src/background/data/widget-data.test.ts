@@ -984,7 +984,8 @@ describe('recentRepositories', () => {
       [revalidated, forced].map((result) => result.data.map((item) => item.repo.name)),
       [['secret'], ['secret']],
     );
-    assert.equal(requestsTo(fake, REPOS).length, 1);
+    // The repo index expires after the same time and is refreshed once in the background.
+    assert.equal(requestsTo(fake, REPOS).length, 2);
   });
 
   it('asks only recently pushed private repositories, a few at a time', async () => {
