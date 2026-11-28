@@ -15,6 +15,7 @@ import { createDashboardHost } from './host/dashboard-host.ts';
 import type { DashboardHost } from './host/dashboard-host.ts';
 import { createMountController } from './mount/mount-controller.ts';
 import { pageLogin } from './mount/selectors.ts';
+import { whenPageSettled } from './page-settled.ts';
 import { createQuickSwitcher } from './quick-switcher/quick-switcher.ts';
 import { applyTweaks } from './tweaks/apply-tweaks.ts';
 import { createChangelogHider } from './tweaks/changelog-hider.ts';
@@ -62,6 +63,9 @@ const controller = createMountController({
 // dashboard is stopped again a few milliseconds later.
 controller.start();
 
+// Pins and file icons go into parts GitHub prerenders and React takes over later.
+const settled = whenPageSettled(document, window);
+
 const targets = {
   dashboard: controller,
   changelogHider: createChangelogHider({ document, window }),
@@ -71,8 +75,9 @@ const targets = {
     data,
     store: syncStore,
     subscribe: (listener) => watchStorageKey(api, 'sync', STORAGE_KEYS.headerPins, listener),
+    settled,
   }),
-  fileIcons: createFileIcons({ document, window }),
+  fileIcons: createFileIcons({ document, window, settled }),
   quickSwitcher: createQuickSwitcher({ document, window, data, openOptions }),
 };
 syncStore.get(STORAGE_KEYS.tweaks).then(
