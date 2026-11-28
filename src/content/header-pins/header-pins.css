@@ -1,12 +1,14 @@
 /*
- * Pinned repositories in GitHub's global header bar. The element is a flex child of the bar and
- * gives up its space before GitHub's own page context does. Pins that no longer fit wrap into a
+ * Pinned repositories in GitHub's global header bar. GitHub's page context next to it claims
+ * the whole row as flex basis, so a shrinkable element would be squeezed even with free space
+ * left. The pins therefore never shrink and are capped instead. Pins beyond the cap wrap into a
  * hidden second row, so only whole pins are shown; the manage panel still lists all of them.
  */
 
 .ghx-header-pins {
   display: flex;
-  flex: 0 1000 auto;
+  flex: 0 0 auto;
+  max-width: min(40vw, 600px);
   align-items: center;
   gap: var(--base-size-4, 4px);
   min-width: 0;
