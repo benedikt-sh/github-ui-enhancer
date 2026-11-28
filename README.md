@@ -38,6 +38,10 @@ The settings page groups small tweaks by the area of GitHub they affect. Changes
 - Chrome/Chromium 126 or newer, or Firefox 128 or newer
 - To build: Node.js 24 or newer and pnpm
 
+## Download
+
+Ready-made packages for both browsers are attached to every [GitHub release](https://github.com/benedikt-sh/github-ui-enhancer/releases). Download the zip for your browser, unpack it into a folder you keep and follow the steps under [Install](#install). The extension is not published in any extension store.
+
 ## Build
 
 ```bash
@@ -56,7 +60,7 @@ The extension is written to `dist/chrome/` and `dist/firefox/`.
 
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode** in the top right corner.
-3. Click **Load unpacked** and select the `dist/chrome` folder.
+3. Click **Load unpacked** and select the unpacked release folder or `dist/chrome`.
 
 After a new build, click the reload icon of the extension in `chrome://extensions` and reload the GitHub tab.
 
@@ -65,7 +69,7 @@ After a new build, click the reload icon of the extension in `chrome://extension
 For trying it out:
 
 1. Open `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on** and select `dist/firefox/manifest.json`.
+2. Click **Load Temporary Add-on** and select `manifest.json` from the unpacked release folder or `dist/firefox/manifest.json`.
 
 Temporary add-ons are removed when Firefox quits. A permanent installation requires signing the extension on addons.mozilla.org, which is also possible as an "unlisted" add-on for personal use.
 
@@ -120,5 +124,19 @@ pnpm test:perf
 ```
 
 Checks the time budgets of the repository search. These tests are not part of `pnpm check` because they are unreliable on a busy machine.
+
+### Releases
+
+Pushing a tag in semantic version format starts the release workflow (`.github/workflows/release.yml`). It runs `pnpm check`, builds both packages with the version from the tag and creates a GitHub release with the zip files, checksums and generated release notes. Tags with a prerelease part (e.g. `v1.2.0-rc.1`) become prereleases.
+
+```bash
+git tag v0.2.0
+```
+
+```bash
+git push origin v0.2.0
+```
+
+The tag is the source of truth for the version: browsers only accept `major.minor.patch` as manifest version, so a prerelease suffix is shown in Chrome as version name only.
 
 Working rules and project decisions are documented in `CLAUDE.md`. Background research and the original implementation plan are in `docs/machbarkeit.md` and `docs/plan.md` (both in German).
