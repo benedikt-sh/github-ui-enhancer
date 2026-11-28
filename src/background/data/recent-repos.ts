@@ -1,8 +1,18 @@
 import { isNonEmptyString, isOneOf, isRecord, isString } from '../../shared/guards.ts';
 import { parseRepoFullName, repoFullName } from '../../shared/repo.ts';
 import { REPO_ACTIVITY_KINDS } from '../../shared/types.ts';
-import type { RecentRepoItem, RepoActivityKind, RepoRef } from '../../shared/types.ts';
+import type {
+  RecentRepoItem,
+  RepoActivityKind,
+  RepoRef,
+  RepoSummary,
+} from '../../shared/types.ts';
+import { byNewest } from './merge.ts';
 import { isRepoRef } from './values.ts';
+
+/** Repositories pushed to longer ago are not asked for their events. */
+export const EVENT_CANDIDATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+export const EVENT_CANDIDATE_LIMIT = 20;
 
 /** One event, reduced to what the recent repositories need. */
 export interface RecentEvent {
@@ -78,6 +88,31 @@ export function isRecentEvent(value: unknown): value is RecentEvent {
     (value['branch'] === null || isString(value['branch'])) &&
     isString(value['createdAt'])
   );
+}
+
+/**
+ * Repositories whose own events are read in addition to the user's events: the most recently
+ * pushed ones that are not public. For fine-grained tokens the user's events contain only public
+ * activity, which already covers public repositories.
+ */
+export function selectEventCandidates(repos: readonly RepoSummary[], now: number): RepoRef[] {
+  const since = now - EVENT_CANDIDATE_MAX_AGE_MS;
+  return repos
+    .filter(
+      (repo) =>
+        repo.visibility !== 'public' &&
+        repo.pushedAt !== null &&
+        Date.parse(repo.pushedAt) >= since,
+    )
+    .sort(byNewest((repo) => repo.pushedAt))
+    .slice(0, EVENT_CANDIDATE_LIMIT)
+    .map(({ owner, name }) => ({ owner, name }));
+}
+
+/** Events caused by one of the given logins, compared case-insensitively. */
+export function ownEvents(events: readonly RecentEvent[], logins: readonly string[]): RecentEvent[] {
+  const own = new Set(logins.map((login) => login.toLowerCase()));
+  return events.filter((event) => event.actor !== null && own.has(event.actor.toLowerCase()));
 }
 
 /**

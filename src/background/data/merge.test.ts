@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { byNewest, clampLimit, DEFAULT_LIMIT, MAX_LIMIT, mergeParts, type Part } from './merge.ts';
+import {
+  byNewest,
+  clampLimit,
+  DEFAULT_LIMIT,
+  MAX_LIMIT,
+  mergeParts,
+  type Part,
+  uniqueErrors,
+} from './merge.ts';
 
 interface Item {
   readonly id: string;
@@ -88,6 +96,29 @@ describe('mergeParts', () => {
       mergeParts([part(Array.from({ length: 150 }, (_, i) => ({ id: `${i}`, at: null })))], options)
         .data.length,
       150,
+    );
+  });
+});
+
+describe('uniqueErrors', () => {
+  it('keeps the first of equal errors and tells owners apart', () => {
+    const down = { kind: 'network', message: 'down', owner: 'acme' } as const;
+
+    assert.deepEqual(
+      uniqueErrors([
+        down,
+        { ...down, status: 500 },
+        { ...down, owner: 'octo' },
+        { kind: 'network', message: 'down' },
+        { kind: 'internal', message: 'down' },
+        { kind: 'network', message: 'down' },
+      ]),
+      [
+        down,
+        { ...down, owner: 'octo' },
+        { kind: 'network', message: 'down' },
+        { kind: 'internal', message: 'down' },
+      ],
     );
   });
 });

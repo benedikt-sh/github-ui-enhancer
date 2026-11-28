@@ -69,3 +69,16 @@ export function mergeParts<T>(parts: readonly Part<T>[], options: MergeOptions<T
     stale: parts.some((part) => part.stale),
   };
 }
+
+/** Drops repeated errors, e.g. the same failure reported for several repositories of an owner. */
+export function uniqueErrors(errors: readonly ApiErrorInfo[]): ApiErrorInfo[] {
+  const seen = new Set<string>();
+  return errors.filter((error) => {
+    const key = JSON.stringify([error.kind, error.message, error.owner ?? null]);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}

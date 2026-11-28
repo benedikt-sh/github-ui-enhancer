@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { aggregateRecentRepos, isRecentEvent, mapEvent } from './recent-repos.ts';
+import type { RepoSummary } from '../../shared/types.ts';
+import {
+  aggregateRecentRepos,
+  EVENT_CANDIDATE_LIMIT,
+  EVENT_CANDIDATE_MAX_AGE_MS,
+  isRecentEvent,
+  mapEvent,
+  ownEvents,
+  selectEventCandidates,
+} from './recent-repos.ts';
 import type { RecentEvent } from './recent-repos.ts';
 
 function restEvent(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -149,6 +158,74 @@ describe('aggregateRecentRepos', () => {
     assert.deepEqual(
       result.map((item) => [item.repo.name, item.activityCount]),
       [['api', 2]],
+    );
+  });
+});
+
+describe('selectEventCandidates', () => {
+  const NOW = Date.parse('2026-11-28T00:00:00Z');
+
+  function summary(name: string, pushedAt: string | null, overrides: Partial<RepoSummary> = {}) {
+    const repo: RepoSummary = {
+      id: name,
+      owner: 'acme',
+      name,
+      fullName: `acme/${name}`,
+      description: null,
+      visibility: 'private',
+      archived: false,
+      fork: false,
+      defaultBranch: 'main',
+      pushedAt,
+      url: `https://github.com/acme/${name}`,
+      ...overrides,
+    };
+    return repo;
+  }
+
+  it('takes recently pushed repositories that are not public, newest first', () => {
+    const oldest = new Date(NOW - EVENT_CANDIDATE_MAX_AGE_MS).toISOString();
+    const repos = [
+      summary('edge', oldest),
+      summary('older', new Date(NOW - EVENT_CANDIDATE_MAX_AGE_MS - 1).toISOString()),
+      summary('public', '2026-11-27T00:00:00Z', { visibility: 'public' }),
+      summary('internal', '2026-11-26T00:00:00Z', { visibility: 'internal' }),
+      summary('never', null),
+      summary('broken', 'yesterday'),
+      summary('newest', '2026-11-27T12:00:00Z'),
+    ];
+
+    assert.deepEqual(selectEventCandidates(repos, NOW), [
+      { owner: 'acme', name: 'newest' },
+      { owner: 'acme', name: 'internal' },
+      { owner: 'acme', name: 'edge' },
+    ]);
+  });
+
+  it('caps the number of candidates', () => {
+    const repos = Array.from({ length: EVENT_CANDIDATE_LIMIT + 5 }, (_, index) =>
+      summary(`r${index}`, new Date(NOW - index * 60_000).toISOString()),
+    );
+
+    const candidates = selectEventCandidates(repos, NOW);
+
+    assert.equal(candidates.length, EVENT_CANDIDATE_LIMIT);
+    assert.equal(candidates.at(-1)?.name, `r${EVENT_CANDIDATE_LIMIT - 1}`);
+  });
+});
+
+describe('ownEvents', () => {
+  it('keeps events of the given logins, ignoring case', () => {
+    const events = [
+      event('1', 'acme/api', 'push', '2026-11-27T10:00:00Z'),
+      { ...event('2', 'acme/api', 'push', '2026-11-27T10:00:00Z'), actor: 'ALICE' },
+      { ...event('3', 'acme/api', 'push', '2026-11-27T10:00:00Z'), actor: 'bob' },
+      { ...event('4', 'acme/api', 'push', '2026-11-27T10:00:00Z'), actor: null },
+    ];
+
+    assert.deepEqual(
+      ownEvents(events, ['Alice']).map((item) => item.id),
+      ['1', '2'],
     );
   });
 });
