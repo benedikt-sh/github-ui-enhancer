@@ -1,0 +1,72 @@
+/*
+ * File type icons in GitHub's repository file list. `file-icons.ts` inserts them in front of
+ * GitHub's file icon, which is hidden, and sets the brand color as `--ghx-file-icon-color`.
+ */
+
+[data-ghx-file-icon-replaced] {
+  display: none !important;
+}
+
+.ghx-file-icon {
+  flex-shrink: 0;
+  overflow: visible;
+  vertical-align: text-bottom;
+  fill: var(--ghx-file-icon-color, currentColor);
+}
+
+.ghx-file-icon--mono {
+  fill: currentColor;
+}
+
+/* Brand colors too light for light themes are mixed with black there, too dark ones with white
+   on dark themes. The mix share is 0% where the color works as it is. */
+.ghx-file-icon--darken {
+  fill: color-mix(in srgb, var(--ghx-file-icon-color), #000 var(--ghx-file-icon-darken, 0%));
+}
+
+.ghx-file-icon--lighten {
+  fill: color-mix(in srgb, var(--ghx-file-icon-color), #fff var(--ghx-file-icon-lighten, 0%));
+}
+
+/*
+ * GitHub's active theme follows `data-color-mode` (light, dark or auto) and the theme names in
+ * `data-light-theme` and `data-dark-theme`, which may point to a dark theme for the day slot
+ * and vice versa. Without these attributes the system preference decides.
+ */
+:root {
+  --ghx-file-icon-darken: 25%;
+  --ghx-file-icon-lighten: 0%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ghx-file-icon-darken: 0%;
+    --ghx-file-icon-lighten: 45%;
+  }
+}
+
+:root[data-color-mode='light'][data-light-theme^='light'],
+:root[data-color-mode='dark'][data-dark-theme^='light'] {
+  --ghx-file-icon-darken: 25%;
+  --ghx-file-icon-lighten: 0%;
+}
+
+:root[data-color-mode='light'][data-light-theme^='dark'],
+:root[data-color-mode='dark'][data-dark-theme^='dark'] {
+  --ghx-file-icon-darken: 0%;
+  --ghx-file-icon-lighten: 45%;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-color-mode='auto'][data-light-theme^='dark'] {
+    --ghx-file-icon-darken: 0%;
+    --ghx-file-icon-lighten: 45%;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-color-mode='auto'][data-dark-theme^='light'] {
+    --ghx-file-icon-darken: 25%;
+    --ghx-file-icon-lighten: 0%;
+  }
+}
